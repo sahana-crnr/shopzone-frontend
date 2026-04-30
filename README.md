@@ -1,93 +1,104 @@
+# ShopZone Frontend
 
-# React Login Form UI
+ShopZone Frontend is a React application for browsing products, managing a cart, and managing a wishlist. It consumes the ShopZone Django backend API as its source of truth.
 
-A simple and responsive **Login Form UI built with React.js** using reusable components and styled with **Tailwind CSS**.
+## Features
 
-This project demonstrates component-based UI development in React and includes a password visibility toggle using an eye icon.
+- Product listing with backend-driven pagination and filtering
+- Product detail pages fetched from the API
+- Auth, cart, and wishlist integration through Django endpoints
+- Persistent authenticated shopping state
 
----
+## Requirements
 
-# Features
+- Node.js 18 or later
+- `npm`
+- The ShopZone backend running locally or remotely
 
-* Built using **React.js**
-* Reusable components (**Button, Input, Card**)
-* **Password show/hide toggle** using eye icon
-* Styled using **Tailwind CSS**
-* Responsive layout for **laptop and desktop**
-* Clean component structure
+## Repository Layout
 
----
+- `src/api/` - API client and backend request wrappers
+- `src/pages/` - route-level screens
+- `src/store/` - Zustand state for auth, cart, wishlist, theme, and search
+- `src/components/` - UI and feature components
 
-# Project Preview
+## Environment Variables
 
-Login form contains:
+Create a local `.env` file from `.env.example` and set the backend base URL.
 
-* Email input field
-* Password input field with **show/hide icon**
-* Sign in button
-* Responsive card layout
+| Variable | Purpose |
+| --- | --- |
+| `REACT_APP_API_BASE_URL` | Base URL of the Django backend API |
 
----
+Example:
 
-# Project Structure
-
-```
-src
- ├── components
- │   ├── Button.jsx
- │   ├── Input.jsx
- │   └── Card.jsx
- │
- ├── LoginForm.jsx
- ├── App.js
- └── index.js
+```env
+REACT_APP_API_BASE_URL=http://127.0.0.1:8000
 ```
 
----
+## Local Setup
 
-# Getting Started
+1. Install dependencies:
 
-This project was created using **Create React App**.
-
-## Install Dependencies
-
-```
+```bash
 npm install
 ```
 
+2. Copy the example environment file:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+3. Update `.env` if your backend runs on a different host or port.
+
 ## Run the Application
 
-```
+Start the development server:
+
+```bash
 npm start
 ```
 
-Open the browser and go to:
+The app is available at:
 
-```
+```text
 http://localhost:3000
 ```
 
-The application will reload automatically when you make changes.
+## Production Build
 
----
+Create a production build:
 
-# Build for Production
-
-To create a production build:
-
-```
+```bash
 npm run build
 ```
 
-The optimized build will be generated in the **build** folder.
+## Backend Dependencies
 
----
+The frontend expects the following backend APIs to be available:
 
-# Technologies Used
+- `POST /api/auth/register/`
+- `POST /api/auth/login/`
+- `POST /api/auth/token/refresh/`
+- `GET /api/auth/me/`
+- `GET /api/products/`
+- `GET /api/products/{id}/`
+- `GET /api/cart/`
+- `POST /api/cart/`
+- `PATCH /api/cart/items/{id}/`
+- `DELETE /api/cart/items/{id}/`
+- `GET /api/wishlist/`
+- `POST /api/wishlist/`
+- `DELETE /api/wishlist/items/{id}/`
 
-* React.js
-* Tailwind CSS
-* React Icons
+If the backend URL changes, update `REACT_APP_API_BASE_URL` in `.env`.
 
----
+## Verification Checklist
+
+- `npm install` completes successfully
+- `npm start` launches the app on port `3000`
+- Products load from the backend API
+- Logged-in cart and wishlist state syncs with the backend
+- Authenticated users cannot modify another user's cart or wishlist data
 
