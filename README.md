@@ -7,6 +7,7 @@ ShopZone Frontend is a React application for browsing products, managing a cart,
 - Product listing with backend-driven pagination and filtering
 - Product detail pages fetched from the API
 - Auth, cart, and wishlist integration through Django endpoints
+- Coupon validation and checkout/order APIs supported by the backend
 - Persistent authenticated shopping state
 
 ## Requirements
@@ -91,8 +92,15 @@ The frontend expects the following backend APIs to be available:
 - `GET /api/wishlist/`
 - `POST /api/wishlist/`
 - `DELETE /api/wishlist/items/{id}/`
+- `GET /api/coupons/`
+- `POST /api/coupons/validate/`
+- `POST /api/checkout/`
+- `GET /api/orders/`
+- `GET /api/orders/{id}/`
 
 If the backend URL changes, update `REACT_APP_API_BASE_URL` in `.env`.
+
+Note: the current cart coupon input is still client-side only until the UI is updated to call the backend coupon and checkout endpoints.
 
 ## Verification Checklist
 
@@ -100,5 +108,5 @@ If the backend URL changes, update `REACT_APP_API_BASE_URL` in `.env`.
 - `npm start` launches the app on port `3000`
 - Products load from the backend API
 - Logged-in cart and wishlist state syncs with the backend
+- Coupon and checkout endpoints are available on the backend
 - Authenticated users cannot modify another user's cart or wishlist data
-
