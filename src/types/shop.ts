@@ -1,6 +1,7 @@
 export interface Product {
   id: number;
   name: string;
+  category?: string;
   size?: string;
   color?: string;
   description?: string;
@@ -16,6 +17,36 @@ export interface Product {
 export interface CartItem extends Product {
   quantity: number;
   cartItemId?: number;
+}
+
+export interface CouponInfo {
+  id: number;
+  code: string;
+  discountPercent: number;
+  minOrderAmount: number;
+  isActive: boolean;
+}
+
+export interface OrderItem {
+  id: number;
+  product: Product;
+  productName: string;
+  productImage: string;
+  unitPrice: number;
+  quantity: number;
+  lineTotal: number;
+}
+
+export interface OrderSummary {
+  id: number;
+  status: string;
+  coupon: CouponInfo | null;
+  subtotal: number;
+  discountAmount: number;
+  totalAmount: number;
+  items: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface UserProfile {
@@ -51,6 +82,8 @@ export interface UsersStoreState {
 export interface SearchStoreState {
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (category: string) => void;
 }
 
 export interface ThemeStoreState {
@@ -75,7 +108,7 @@ export interface ShopStoreState {
   removeFromCart: (id: number) => Promise<void>;
   toggleWishlist: (product: Product) => Promise<void>;
   removeFromWishlist: (id: number) => Promise<void>;
-  applyDiscount: (code: string) => void;
+  applyDiscount: (code: string) => Promise<void>;
   removeDiscount: () => void;
   setShop: (cart: CartItem[], wishlist: Product[]) => void;
   clearShop: () => void;

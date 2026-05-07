@@ -33,6 +33,9 @@ function extractErrorMessage(payload: unknown, fallback: string) {
       "password",
       "name",
       "phone",
+      "coupon_code",
+      "couponCode",
+      "checkout",
       "non_field_errors",
       "nonFieldErrors",
     ];
@@ -90,4 +93,3 @@ export async function apiRequest<T>(
 
   return payload as T;
 }
-

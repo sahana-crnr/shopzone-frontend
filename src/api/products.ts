@@ -21,6 +21,7 @@ export type ProductsApiResponse = {
 
 export type ProductListParams = {
   search?: string;
+  category?: string;
   min_price?: number;
   max_price?: number;
   min_rating?: number;
@@ -58,4 +59,3 @@ export async function fetchProductCatalog() {
   const response = await fetchProducts({ page: 1, page_size: 100 });
   return response.results;
 }
-

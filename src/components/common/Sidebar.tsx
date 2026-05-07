@@ -11,6 +11,7 @@ import {
 import { MdCategory } from "react-icons/md";
 import useAuthStore from "../../store/useAuthStore";
 import useShopStore from "../../store/useShopStore";
+import useSearchStore from "../../store/useSearchStore";
 import { toIconComponent } from "../../utils/icons";
 import { Button } from "../ui/button";
 import {
@@ -18,6 +19,7 @@ import {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetClose,
   SheetTrigger,
 } from "../ui/sheet";
 
@@ -29,15 +31,32 @@ const SignOutIcon = toIconComponent(FaSignOutAlt);
 const UserCircleIcon = toIconComponent(FaUserCircle);
 const CategoryIcon = toIconComponent(MdCategory);
 
+const categories = [
+  "Electronics",
+  "Fashion & Apparel",
+  "Home & Furniture",
+  "Sports & Outdoors",
+];
+
 const Sidebar = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const navigate = useNavigate();
   const wishlistCount = useShopStore((state) => state.wishlist.length);
+  const setSearchTerm = useSearchStore((state) => state.setSearchTerm);
+  const setSelectedCategory = useSearchStore(
+    (state) => state.setSelectedCategory,
+  );
 
   const toggleCategories = () => setIsCategoryOpen((current) => !current);
 
   const handleNavigation = (path: string) => {
     navigate(path);
+  };
+
+  const handleCategorySelect = (category: string) => {
+    setSearchTerm("");
+    setSelectedCategory(category);
+    navigate("/home");
   };
 
   const handleSignOut = () => {
@@ -81,21 +100,19 @@ const Sidebar = () => {
               }`}
             >
               <ul className="py-2 space-y-2 text-muted-foreground">
-                <li className="hover:text-purple-600 cursor-pointer">
-                  Electronics
-                </li>
-                <li className="hover:text-purple-600 cursor-pointer">
-                  Fashion & Apparel
-                </li>
-                <li className="hover:text-purple-600 cursor-pointer">
-                  Home & Furniture
-                </li>
-                <li className="hover:text-purple-600 cursor-pointer">
-                  Books & Media
-                </li>
-                <li className="hover:text-purple-600 cursor-pointer">
-                  Sports & Outdoors
-                </li>
+                {categories.map((category) => (
+                  <li key={category}>
+                    <SheetClose asChild>
+                      <button
+                        type="button"
+                        onClick={() => handleCategorySelect(category)}
+                        className="w-full text-left hover:text-purple-600 cursor-pointer"
+                      >
+                        {category}
+                      </button>
+                    </SheetClose>
+                  </li>
+                ))}
               </ul>
             </div>
 

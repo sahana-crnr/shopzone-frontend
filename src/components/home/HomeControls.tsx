@@ -32,11 +32,13 @@ type HomeControlsProps = {
   minRating: number;
   minReviews: string;
   sortBy: string;
+  selectedCategory: string;
   setMinPrice: (value: string) => void;
   setMaxPrice: (value: string) => void;
   setMinRating: (value: number) => void;
   setMinReviews: (value: string) => void;
   setSortBy: (value: string) => void;
+  clearCategory: () => void;
 };
 
 const HomeControls: React.FC<HomeControlsProps> = ({
@@ -46,11 +48,13 @@ const HomeControls: React.FC<HomeControlsProps> = ({
   minRating,
   minReviews,
   sortBy,
+  selectedCategory,
   setMinPrice,
   setMaxPrice,
   setMinRating,
   setMinReviews,
   setSortBy,
+  clearCategory,
 }) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -95,6 +99,18 @@ const HomeControls: React.FC<HomeControlsProps> = ({
         <h1 className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
           Product collection
         </h1>
+        {selectedCategory ? (
+          <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-50 px-3 py-1 text-sm font-semibold text-purple-700 dark:bg-purple-500/10 dark:text-purple-300">
+            <span>Category: {selectedCategory}</span>
+            <button
+              type="button"
+              onClick={clearCategory}
+              className="text-xs font-bold uppercase tracking-wide hover:underline"
+            >
+              Clear
+            </button>
+          </div>
+        ) : null}
       </div>
       <div className="flex w-full flex-wrap items-center justify-end gap-3 sm:gap-4 lg:w-auto">
         <p className="hidden sm:block font-medium text-muted-foreground">
@@ -169,7 +185,12 @@ const HomeControls: React.FC<HomeControlsProps> = ({
                   Price Range (₹)
                 </h3>
                 <div className="flex items-center gap-2">
+                  <label htmlFor="min-price" className="sr-only">
+                    Minimum price
+                  </label>
                   <Input
+                    id="min-price"
+                    name="minPrice"
                     type="number"
                     min="0"
                     placeholder="Min"
@@ -178,7 +199,12 @@ const HomeControls: React.FC<HomeControlsProps> = ({
                     className="h-9 border-border bg-background text-sm text-foreground shadow-sm"
                   />
                   <span className="text-foreground/70">-</span>
+                  <label htmlFor="max-price" className="sr-only">
+                    Maximum price
+                  </label>
                   <Input
+                    id="max-price"
+                    name="maxPrice"
                     type="number"
                     min="0"
                     placeholder="Max"
@@ -193,7 +219,12 @@ const HomeControls: React.FC<HomeControlsProps> = ({
                 <h3 className="mb-2 text-sm font-semibold text-foreground">
                   Minimum Rating
                 </h3>
+                <label htmlFor="min-rating" className="sr-only">
+                  Minimum rating
+                </label>
                 <select
+                  id="min-rating"
+                  name="minRating"
                   value={minRating}
                   onChange={(event: ChangeEvent<HTMLSelectElement>) =>
                     setMinRating(Number(event.target.value))
@@ -211,7 +242,12 @@ const HomeControls: React.FC<HomeControlsProps> = ({
                 <h3 className="mb-2 text-sm font-semibold text-foreground">
                   Minimum Reviews
                 </h3>
+                <label htmlFor="min-reviews" className="sr-only">
+                  Minimum reviews
+                </label>
                 <Input
+                  id="min-reviews"
+                  name="minReviews"
                   type="number"
                   min="0"
                   placeholder="e.g. 100"
@@ -227,6 +263,7 @@ const HomeControls: React.FC<HomeControlsProps> = ({
                   setMaxPrice("");
                   setMinRating(0);
                   setMinReviews("");
+                  clearCategory();
                 }}
                 className="w-full bg-purple-600 text-sm text-white hover:bg-purple-700"
               >

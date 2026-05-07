@@ -1,9 +1,11 @@
 import React, { ChangeEvent, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
 import { FaTrash, FaMinus, FaPlus } from "react-icons/fa";
 import { FiShoppingCart } from "react-icons/fi";
+import useAuthStore from "../store/useAuthStore";
 import useShopStore, {
   getCartTotalItems,
   getCartTotalPrice,
@@ -12,6 +14,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { CartItem } from "../types/shop";
 import { toIconComponent } from "../utils/icons";
+import { checkoutOrder } from "../api/commerce";
 import {
   quantityButtonClass,
   quantityContainerClass,
@@ -30,10 +33,12 @@ const Cart: React.FC = () => {
   const cartTotalPrice = useShopStore(getCartTotalPrice);
   const updateQuantity = useShopStore((state) => state.updateCartQuantity);
   const removeItem = useShopStore((state) => state.removeFromCart);
+  const clearShop = useShopStore((state) => state.clearShop);
   const discountPercent = useShopStore((state) => state.discountPercent);
   const discountCode = useShopStore((state) => state.discountCode);
   const applyDiscount = useShopStore((state) => state.applyDiscount);
   const removeDiscount = useShopStore((state) => state.removeDiscount);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const [couponInput, setCouponInput] = useState<string>("");
 
   const discountAmount = Math.round(cartTotalPrice * (discountPercent / 100));
@@ -44,8 +49,35 @@ const Cart: React.FC = () => {
   };
 
   const handleApplyCoupon = () => {
-    applyDiscount(couponInput);
+    void applyDiscount(couponInput);
     setCouponInput("");
+  };
+
+  const handleCheckout = async () => {
+    if (!accessToken) {
+      toast.error("Please log in again to checkout.");
+      return;
+    }
+
+    try {
+      await checkoutOrder(
+        {
+          coupon_code: discountCode || undefined,
+        },
+        accessToken,
+      );
+
+      clearShop();
+      toast.success("Order placed successfully!");
+      navigate("/orders");
+    } catch (error) {
+      if (error instanceof Error) {
+        toast.error(error.message);
+        return;
+      }
+
+      toast.error("Unable to place order.");
+    }
   };
 
   return (
@@ -117,7 +149,9 @@ const Cart: React.FC = () => {
                     <div className={quantityContainerClass}>
                       <button
                         type="button"
-                        onClick={() => void updateQuantity(item.id, -1)}
+                      onClick={() =>
+                        void updateQuantity(item.cartItemId ?? item.id, -1)
+                      }
                         className={quantityButtonClass}
                         aria-label={`Decrease quantity of ${item.name}`}
                       >
@@ -128,7 +162,9 @@ const Cart: React.FC = () => {
                       </span>
                       <button
                         type="button"
-                        onClick={() => void updateQuantity(item.id, 1)}
+                      onClick={() =>
+                        void updateQuantity(item.cartItemId ?? item.id, 1)
+                      }
                         className={quantityButtonClass}
                         aria-label={`Increase quantity of ${item.name}`}
                       >
@@ -137,7 +173,9 @@ const Cart: React.FC = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => void removeItem(item.id)}
+                      onClick={() =>
+                        void removeItem(item.cartItemId ?? item.id)
+                      }
                       className={removeButtonClass}
                       title="Remove"
                       aria-label={`Remove ${item.name} from cart`}
@@ -155,7 +193,9 @@ const Cart: React.FC = () => {
               </h2>
 
               <div className="flex flex-col gap-2 border-b pb-4">
-                <label className="text-sm font-medium">Apply Coupon</label>
+                <label htmlFor="coupon-code" className="text-sm font-medium">
+                  Apply Coupon
+                </label>
                 {discountCode ? (
                   <div className="flex justify-between items-center bg-green-50 text-green-700 px-3 py-2 rounded-xl border border-green-200 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20">
                     <span className="font-bold text-sm">
@@ -171,6 +211,8 @@ const Cart: React.FC = () => {
                 ) : (
                   <div className="flex gap-2">
                     <Input
+                      id="coupon-code"
+                      name="couponCode"
                       type="text"
                       placeholder="Enter Code (e.g. SAVE10)"
                       value={couponInput}
@@ -209,7 +251,10 @@ const Cart: React.FC = () => {
                   ₹{finalPrice}
                 </span>
               </div>
-              <Button className="w-full mt-4 text-lg h-12 bg-purple-600 hover:bg-purple-700">
+              <Button
+                onClick={() => void handleCheckout()}
+                className="w-full mt-4 text-lg h-12 bg-purple-600 hover:bg-purple-700"
+              >
                 Proceed to Checkout
               </Button>
             </div>

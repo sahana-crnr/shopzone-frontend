@@ -4,6 +4,7 @@ import { Product } from "../types/shop";
 
 export type ProductFilters = {
   searchTerm: string;
+  category: string;
   minPrice: string;
   maxPrice: string;
   minRating: number;
@@ -41,6 +42,7 @@ export const fetchProductsPage = async ({
 
   const response = await fetchProducts({
     search: filters.searchTerm.trim() || undefined,
+    category: filters.category || undefined,
     min_price: parseNumber(filters.minPrice),
     max_price: parseNumber(filters.maxPrice),
     min_rating:

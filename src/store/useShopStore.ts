@@ -7,6 +7,7 @@ import { ShopStoreState } from "../types/shop";
 import {
   addCartItem,
   addWishlistItem,
+  validateCoupon,
   deleteCartItem,
   deleteWishlistItem,
   fetchCart,
@@ -103,7 +104,9 @@ const useShopStore = create<ShopStoreState>()(
           return;
         }
 
-        const cartItem = get().cart.find((item) => item.id === id);
+        const cartItem = get().cart.find(
+          (item) => item.cartItemId === id || item.id === id,
+        );
 
         if (!cartItem) {
           return;
@@ -117,7 +120,11 @@ const useShopStore = create<ShopStoreState>()(
         }
 
         try {
-          await updateCartItem(cartItem.cartItemId ?? id, { quantity: nextQuantity }, accessToken);
+          await updateCartItem(
+            cartItem.cartItemId ?? cartItem.id,
+            { quantity: nextQuantity },
+            accessToken,
+          );
           await get().syncShop();
         } catch (error) {
           if (isAuthTokenError(error)) {
@@ -140,7 +147,9 @@ const useShopStore = create<ShopStoreState>()(
           return;
         }
 
-        const cartItem = get().cart.find((item) => item.id === id);
+        const cartItem = get().cart.find(
+          (item) => item.cartItemId === id || item.id === id,
+        );
         if (!cartItem) {
           return;
         }
@@ -170,14 +179,13 @@ const useShopStore = create<ShopStoreState>()(
           return;
         }
 
-        const existingItem = get().wishlist.find((item) => item.id === product.id);
+        const existingItem = get().wishlist.find(
+          (item) => item.wishlistItemId === product.wishlistItemId || item.id === product.id,
+        );
 
         try {
           if (existingItem) {
-            await deleteWishlistItem(
-              existingItem.wishlistItemId ?? existingItem.id,
-              accessToken,
-            );
+            await deleteWishlistItem(existingItem.wishlistItemId ?? existingItem.id, accessToken);
             toast.success("Removed from Wishlist!");
           } else {
             await addWishlistItem({ product_id: product.id }, accessToken);
@@ -206,16 +214,15 @@ const useShopStore = create<ShopStoreState>()(
           return;
         }
 
-        const existingItem = get().wishlist.find((item) => item.id === id);
+        const existingItem = get().wishlist.find(
+          (item) => item.wishlistItemId === id || item.id === id,
+        );
         if (!existingItem) {
           return;
         }
 
         try {
-          await deleteWishlistItem(
-            existingItem.wishlistItemId ?? existingItem.id,
-            accessToken,
-          );
+          await deleteWishlistItem(existingItem.wishlistItemId ?? existingItem.id, accessToken);
           await get().syncShop();
           toast.success("Removed from Wishlist!");
         } catch (error) {
@@ -231,15 +238,51 @@ const useShopStore = create<ShopStoreState>()(
         }
       },
 
-      applyDiscount: (code) => {
-        if (code === "SAVE10") {
-          set({ discountCode: code, discountPercent: 10 });
-          toast.success("10% discount applied!");
-        } else if (code === "SAVE20") {
-          set({ discountCode: code, discountPercent: 20 });
-          toast.success("20% discount applied!");
-        } else {
-          toast.error("Invalid discount code!");
+      applyDiscount: async (code) => {
+        const accessToken = useAuthStore.getState().accessToken;
+
+        if (!accessToken) {
+          toast.error("Please log in again to apply a coupon.");
+          return;
+        }
+
+        const normalizedCode = code.trim().toUpperCase();
+
+        if (!normalizedCode) {
+          toast.error("Enter a coupon code.");
+          return;
+        }
+
+        try {
+          const coupon = await validateCoupon(normalizedCode, accessToken);
+          const cartTotal = get().cart.reduce(
+            (total, item) => total + item.price * item.quantity,
+            0,
+          );
+
+          if (coupon.minOrderAmount > 0 && cartTotal < coupon.minOrderAmount) {
+            set({ discountCode: "", discountPercent: 0 });
+            toast.error(
+              `This coupon requires a minimum order of ₹${coupon.minOrderAmount}.`,
+            );
+            return;
+          }
+
+          set({
+            discountCode: coupon.code,
+            discountPercent: coupon.discountPercent,
+          });
+          toast.success(`${coupon.discountPercent}% discount applied!`);
+        } catch (error) {
+          if (isAuthTokenError(error)) {
+            useAuthStore.getState().logoutUser();
+            set({ cart: [], wishlist: [], discountCode: "", discountPercent: 0 });
+            toast.error("Your session expired. Please log in again.");
+            return;
+          }
+
+          set({ discountCode: "", discountPercent: 0 });
+          toast.error(error instanceof Error ? error.message : "Invalid discount code!");
         }
       },
 

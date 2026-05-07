@@ -83,7 +83,7 @@ const Wishlist: React.FC = () => {
                 </div>
 
                 <button
-                  onClick={() => void handleRemoveItem(item.id)}
+                  onClick={() => void handleRemoveItem(item.wishlistItemId ?? item.id)}
                   className="text-red-500 hover:bg-red-50 p-3 rounded-full transition-colors"
                   title="Remove"
                 >

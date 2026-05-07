@@ -1,5 +1,10 @@
 import { apiRequest } from "./client";
-import { CartItem, Product } from "../types/shop";
+import {
+  CartItem,
+  CouponInfo,
+  OrderSummary,
+  Product,
+} from "../types/shop";
 
 export type CartItemResponse = {
   id: number;
@@ -35,6 +40,16 @@ export type CartUpdatePayload = {
 export type WishlistUpsertPayload = {
   product_id: number;
 };
+
+export type CouponLookupResponse = CouponInfo;
+
+export type CheckoutPayload = {
+  coupon_code?: string;
+};
+
+export type CheckoutResponse = OrderSummary;
+
+export type OrderListResponse = OrderSummary[];
 
 export async function fetchCart(accessToken: string) {
   return apiRequest<CartResponse>("/api/cart/", {
@@ -103,6 +118,56 @@ export async function addWishlistItem(
 export async function deleteWishlistItem(itemId: number, accessToken: string) {
   return apiRequest<void>(`/api/wishlist/items/${itemId}/`, {
     method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function fetchCoupons(accessToken: string) {
+  return apiRequest<CouponLookupResponse[]>("/api/coupons/", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function validateCoupon(code: string, accessToken: string) {
+  return apiRequest<CouponLookupResponse>("/api/coupons/validate/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ code }),
+  });
+}
+
+export async function checkoutOrder(
+  payload: CheckoutPayload,
+  accessToken: string,
+) {
+  return apiRequest<CheckoutResponse>("/api/checkout/", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function fetchOrders(accessToken: string) {
+  return apiRequest<OrderListResponse>("/api/orders/", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function fetchOrderById(orderId: number, accessToken: string) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/`, {
+    method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },

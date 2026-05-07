@@ -16,6 +16,8 @@ import {
 
 const Home = () => {
   const searchTerm = useSearchStore((state) => state.searchTerm);
+  const selectedCategory = useSearchStore((state) => state.selectedCategory);
+  const setSelectedCategory = useSearchStore((state) => state.setSelectedCategory);
   const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
@@ -27,16 +29,33 @@ const Home = () => {
   const queryFilters = useMemo<ProductFilters>(
     () => ({
       searchTerm: debouncedSearchTerm,
+      category: selectedCategory,
       minPrice,
       maxPrice,
       minRating,
       minReviews,
       sortBy,
     }),
-    [debouncedSearchTerm, minPrice, maxPrice, minRating, minReviews, sortBy],
+    [
+      debouncedSearchTerm,
+      selectedCategory,
+      minPrice,
+      maxPrice,
+      minRating,
+      minReviews,
+      sortBy,
+    ],
   );
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isError,
+    error,
+  } =
     useInfiniteQuery<
       ProductsPage,
       Error,
@@ -49,6 +68,9 @@ const Home = () => {
       getNextPageParam: (lastPage) =>
         lastPage.hasMore ? lastPage.page + 1 : undefined,
     });
+  const errorMessage = isError
+    ? error?.message || "Unable to load products."
+    : null;
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
@@ -61,15 +83,24 @@ const Home = () => {
   const totalFilteredCount = pages[0]?.totalCount ?? 0;
   const animationSeed = useMemo(
     () =>
-      [
-        debouncedSearchTerm,
-        minPrice,
-        maxPrice,
-        minRating,
-        minReviews,
-        sortBy,
-      ].join("|"),
-    [debouncedSearchTerm, minPrice, maxPrice, minRating, minReviews, sortBy],
+        [
+          debouncedSearchTerm,
+          selectedCategory,
+          minPrice,
+          maxPrice,
+          minRating,
+          minReviews,
+          sortBy,
+        ].join("|"),
+    [
+      debouncedSearchTerm,
+      selectedCategory,
+      minPrice,
+      maxPrice,
+      minRating,
+      minReviews,
+      sortBy,
+    ],
   );
 
   return (
@@ -83,11 +114,13 @@ const Home = () => {
           minRating={minRating}
           minReviews={minReviews}
           sortBy={sortBy}
+          selectedCategory={selectedCategory}
           setMinPrice={setMinPrice}
           setMaxPrice={setMaxPrice}
           setMinRating={setMinRating}
           setMinReviews={setMinReviews}
           setSortBy={setSortBy}
+          clearCategory={() => setSelectedCategory("")}
         />
         <ProductsSection
           displayProducts={displayProducts}
@@ -95,6 +128,7 @@ const Home = () => {
           isInitialLoading={isLoading && displayProducts.length === 0}
           isFetchingNextPage={isFetchingNextPage}
           loadMoreRef={loadMoreRef}
+          errorMessage={errorMessage}
         />
       </main>
       <Footer />

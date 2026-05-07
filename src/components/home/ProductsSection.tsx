@@ -9,6 +9,7 @@ type ProductsSectionProps = {
   isInitialLoading: boolean;
   isFetchingNextPage: boolean;
   loadMoreRef: React.RefCallback<HTMLDivElement>;
+  errorMessage?: string | null;
 };
 
 type AnimatedResultCardProps = {
@@ -66,11 +67,20 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
   isInitialLoading,
   isFetchingNextPage,
   loadMoreRef,
+  errorMessage,
 }) => {
   const showInitialLoadingText = useDelayedBoolean(isInitialLoading);
 
   if (isInitialLoading && showInitialLoadingText) {
     return <Preloader />;
+  }
+
+  if (errorMessage) {
+    return (
+      <div className="rounded-[2rem] border border-red-200 bg-red-50 px-6 py-20 text-center text-lg text-red-700 shadow-[0_20px_60px_rgba(15,23,42,0.08)] dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+        {errorMessage}
+      </div>
+    );
   }
 
   if (displayProducts.length === 0) {

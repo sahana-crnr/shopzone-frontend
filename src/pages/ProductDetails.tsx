@@ -90,6 +90,16 @@ const ProductDetails: React.FC = () => {
     }
   }, [addToCart, product]);
 
+  const handleBuyNow = useCallback(async () => {
+    if (!product) {
+      return;
+    }
+
+    await addToCart(product);
+    useShopStore.getState().closeCart();
+    navigate("/cart");
+  }, [addToCart, navigate, product]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -197,7 +207,10 @@ const ProductDetails: React.FC = () => {
               >
                 <ShoppingCartIcon /> ADD TO CART
               </Button>
-              <Button className="flex-1 bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2 whitespace-nowrap text-center ">
+              <Button
+                onClick={() => void handleBuyNow()}
+                className="flex-1 bg-purple-600 hover:bg-purple-700 flex items-center justify-center gap-2 whitespace-nowrap text-center "
+              >
                 <BoltIcon /> BUY NOW
               </Button>
             </div>

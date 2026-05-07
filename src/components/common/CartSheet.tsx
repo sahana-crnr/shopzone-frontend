@@ -78,7 +78,7 @@ export default function CartSheet() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 text-red-500 hover:text-red-600"
-                  onClick={() => void removeFromCart(item.id)}
+                  onClick={() => void removeFromCart(item.cartItemId ?? item.id)}
                 >
                   <TrashIcon size={14} />
                 </Button>
