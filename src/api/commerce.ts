@@ -44,6 +44,7 @@ export type WishlistUpsertPayload = {
 export type CouponLookupResponse = CouponInfo;
 
 export type CheckoutPayload = {
+  shipping_address: string;
   coupon_code?: string;
 };
 

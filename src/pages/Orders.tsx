@@ -67,6 +67,9 @@ const Orders: React.FC = () => {
                     <p className="text-sm text-muted-foreground">
                       {new Date(order.createdAt).toLocaleString()}
                     </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Shipping address: {order.shippingAddress}
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-sm">
                     <span className="rounded-full bg-purple-600/10 px-3 py-1 font-semibold text-purple-700 dark:text-purple-300">

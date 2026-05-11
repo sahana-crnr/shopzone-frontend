@@ -40,6 +40,7 @@ const Cart: React.FC = () => {
   const removeDiscount = useShopStore((state) => state.removeDiscount);
   const accessToken = useAuthStore((state) => state.accessToken);
   const [couponInput, setCouponInput] = useState<string>("");
+  const [shippingAddress, setShippingAddress] = useState<string>("");
 
   const discountAmount = Math.round(cartTotalPrice * (discountPercent / 100));
   const finalPrice = cartTotalPrice - discountAmount;
@@ -60,8 +61,14 @@ const Cart: React.FC = () => {
     }
 
     try {
+      if (!shippingAddress.trim()) {
+        toast.error("Please enter a shipping address.");
+        return;
+      }
+
       await checkoutOrder(
         {
+          shipping_address: shippingAddress.trim(),
           coupon_code: discountCode || undefined,
         },
         accessToken,
@@ -193,6 +200,24 @@ const Cart: React.FC = () => {
               </h2>
 
               <div className="flex flex-col gap-2 border-b pb-4">
+                <label htmlFor="shipping-address" className="text-sm font-medium">
+                  Shipping Address
+                </label>
+                <textarea
+                  id="shipping-address"
+                  name="shippingAddress"
+                  rows={4}
+                  placeholder="Enter your full delivery address"
+                  value={shippingAddress}
+                  onChange={(event) => setShippingAddress(event.target.value)}
+                  className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-purple-500/40"
+                />
+                <p className="text-xs text-muted-foreground">
+                  This address will be saved with your order.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2 border-b pb-4">
                 <label htmlFor="coupon-code" className="text-sm font-medium">
                   Apply Coupon
                 </label>
@@ -253,6 +278,7 @@ const Cart: React.FC = () => {
               </div>
               <Button
                 onClick={() => void handleCheckout()}
+                disabled={!shippingAddress.trim()}
                 className="w-full mt-4 text-lg h-12 bg-purple-600 hover:bg-purple-700"
               >
                 Proceed to Checkout

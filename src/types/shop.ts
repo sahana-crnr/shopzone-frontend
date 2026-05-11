@@ -39,6 +39,7 @@ export interface OrderItem {
 
 export interface OrderSummary {
   id: number;
+  shippingAddress: string;
   status: string;
   coupon: CouponInfo | null;
   subtotal: number;
