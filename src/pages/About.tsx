@@ -14,10 +14,6 @@ export default function About() {
             data is powered by the Django backend, while the React frontend
             provides the user experience.
           </p>
-          <p className="mt-4 text-muted-foreground leading-7">
-            The project is organized with separate backend and frontend repos so
-            each side can be developed and reviewed independently.
-          </p>
         </div>
       </main>
       <Footer />
