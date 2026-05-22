@@ -1,4 +1,4 @@
-import React, { ChangeEvent, useState } from "react";
+import React, { ChangeEvent, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import Header from "../components/common/Header";
@@ -41,6 +41,8 @@ const Cart: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [couponInput, setCouponInput] = useState<string>("");
   const [shippingAddress, setShippingAddress] = useState<string>("");
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const checkoutInFlight = useRef(false);
 
   const discountAmount = Math.round(cartTotalPrice * (discountPercent / 100));
   const finalPrice = cartTotalPrice - discountAmount;
@@ -55,10 +57,17 @@ const Cart: React.FC = () => {
   };
 
   const handleCheckout = async () => {
+    if (checkoutInFlight.current) {
+      return;
+    }
+
     if (!accessToken) {
       toast.error("Please log in again to checkout.");
       return;
     }
+
+    checkoutInFlight.current = true;
+    setIsCheckingOut(true);
 
     try {
       if (!shippingAddress.trim()) {
@@ -84,6 +93,9 @@ const Cart: React.FC = () => {
       }
 
       toast.error("Unable to place order.");
+    } finally {
+      checkoutInFlight.current = false;
+      setIsCheckingOut(false);
     }
   };
 
@@ -278,10 +290,10 @@ const Cart: React.FC = () => {
               </div>
               <Button
                 onClick={() => void handleCheckout()}
-                disabled={!shippingAddress.trim()}
+                disabled={!shippingAddress.trim() || isCheckingOut}
                 className="w-full mt-4 text-lg h-12 bg-purple-600 hover:bg-purple-700"
               >
-                Proceed to Checkout
+                {isCheckingOut ? "Processing..." : "Proceed to Checkout"}
               </Button>
             </div>
           </div>
