@@ -7,10 +7,12 @@ export interface Product {
   description?: string;
   price: number;
   image?: string;
+  images?: string[];
   originalPrice?: number;
   rating?: number;
   ratingsCount?: number;
   reviewsCount?: number;
+  tags?: string[];
   wishlistItemId?: number;
 }
 

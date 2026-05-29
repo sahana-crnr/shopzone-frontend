@@ -13,6 +13,7 @@ import {
   ProductsPage,
   ProductsQueryKey,
 } from "../data/productQueries";
+import { scoreSearchMatch } from "../utils/searchTerms";
 
 const Home = () => {
   const searchTerm = useSearchStore((state) => state.searchTerm);
@@ -79,7 +80,30 @@ const Home = () => {
   }, [fetchNextPage, hasNextPage, inView, isFetchingNextPage]);
 
   const pages = data?.pages ?? [];
-  const displayProducts = pages.flatMap((page) => page.products);
+  const allProducts = pages.flatMap((page) => page.products);
+  const searchQuery = debouncedSearchTerm.trim();
+  const displayProducts = useMemo(() => {
+    if (!searchQuery) {
+      return allProducts;
+    }
+
+    return allProducts
+      .map((product) => {
+        const score = scoreSearchMatch(searchQuery, [
+          product.name ?? "",
+          product.category ?? "",
+          product.color ?? "",
+          product.size ?? "",
+          product.description ?? "",
+          (product.tags ?? []).join(" "),
+        ]);
+
+        return { product, score };
+      })
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(({ product }) => product);
+  }, [allProducts, searchQuery]);
   const totalFilteredCount = pages[0]?.totalCount ?? 0;
   const animationSeed = useMemo(
     () =>

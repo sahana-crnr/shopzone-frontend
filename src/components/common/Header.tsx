@@ -25,6 +25,7 @@ import useThemeStore from "../../store/useThemeStore";
 import useSearchStore from "../../store/useSearchStore";
 import { toIconComponent } from "../../utils/icons";
 import { fetchProductCatalog } from "../../api/products";
+import { scoreSearchMatch } from "../../utils/searchTerms";
 
 const quickSearchTerms = ["Sneakers", "Headphones", "Watches", "Bags"];
 const SearchIcon = toIconComponent(FaSearch);
@@ -85,7 +86,6 @@ export default function Header() {
 
   const suggestions = useMemo(() => {
     const query = debouncedSearchTerm.trim().toLowerCase();
-    const queryWords = query.split(/\s+/).filter(Boolean);
 
     return productList
       .map((product) => {
@@ -93,7 +93,9 @@ export default function Header() {
         const description = (product.description ?? "").toLowerCase();
         const color = (product.color ?? "").toLowerCase();
         const size = (product.size ?? "").toLowerCase();
-        const haystack = [name, description, color, size].join(" ");
+        const category = (product.category ?? "").toLowerCase();
+        const tags = (product.tags ?? []).join(" ").toLowerCase();
+        const haystackParts = [name, description, color, size, category, tags];
 
         if (!query) {
           const popularity =
@@ -104,23 +106,17 @@ export default function Header() {
           return { product, score: popularity };
         }
 
-        const matchesAllWords = queryWords.every((word) =>
-          haystack.includes(word),
-        );
-        if (!matchesAllWords) {
+        let score = scoreSearchMatch(query, haystackParts);
+        if (score === 0) {
           return { product, score: 0 };
         }
 
-        let score = 0;
-        if (name.startsWith(query)) score += 500;
-        if (name.includes(query)) score += 250;
-        if (description.includes(query)) score += 80;
-        if (color.includes(query) || size.includes(query)) score += 60;
-
-        for (const word of queryWords) {
-          if (name.includes(word)) score += 45;
-          if (description.includes(word)) score += 18;
-          if (color.includes(word) || size.includes(word)) score += 12;
+        if (name.includes(query)) score += 120;
+        if (description.includes(query)) score += 40;
+        if (color.includes(query) || size.includes(query)) score += 30;
+        if (category.includes(query)) score += 35;
+        if ((product.tags ?? []).some((tag) => tag.toLowerCase().includes(query))) {
+          score += 60;
         }
 
         score += (product.rating ?? 0) * 20;

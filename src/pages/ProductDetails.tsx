@@ -12,6 +12,7 @@ import {
 import { FiShare2 } from "react-icons/fi";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
+import ImageCarousel from "../components/ImageCarousel";
 import toast from "react-hot-toast";
 import { useQuery } from "@tanstack/react-query";
 import useShopStore from "../store/useShopStore";
@@ -167,37 +168,40 @@ const ProductDetails: React.FC = () => {
 
         <div className="max-w-[1200px] mx-auto bg-card flex flex-col md:flex-row shadow-sm rounded-2xl border border-border">
           <div className="relative w-full md:w-2/5 p-4 md:p-6 border-r border-border flex flex-col items-center">
-            <div className="flex-1 w-full flex items-center justify-center py-6 md:py-10">
-              <img
-                src={
-                  product.image?.startsWith("/")
-                    ? process.env.PUBLIC_URL + product.image
+            <div className="relative w-full">
+              <ImageCarousel
+                images={
+                  product.images && product.images.length > 0
+                    ? product.images
                     : product.image
+                      ? [product.image]
+                      : []
                 }
-                alt={product.name}
-                className="max-w-full max-h-[420px] object-contain hover:scale-105 transition-transform duration-300"
+                productName={product.name}
               />
-            </div>
 
-            <div className="absolute top-3 right-3 flex flex-col gap-3">
-              <button
-                onClick={handleWishlist}
-                className="bg-card p-2.5 rounded-full shadow-sm border border-border text-muted-foreground hover:text-red-500 hover:bg-muted/70 transition-colors"
-                title="Wishlist"
-              >
-                {isWishlisted ? (
-                  <HeartIcon className="text-red-500 text-xl" />
-                ) : (
-                  <HeartOutlineIcon className="text-xl" />
-                )}
-              </button>
-              <button
-                onClick={handleShare}
-                className="bg-card p-2.5 rounded-full shadow-sm border border-border text-muted-foreground hover:text-blue-600 hover:bg-muted/70 transition-colors"
-                title="Share"
-              >
-                <ShareIcon className="text-xl" />
-              </button>
+              <div className="absolute right-3 top-3 z-20 flex flex-col gap-2">
+                <button
+                  onClick={handleWishlist}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground shadow-sm backdrop-blur transition hover:border-red-200 hover:bg-card hover:text-red-500"
+                  title="Wishlist"
+                  type="button"
+                >
+                  {isWishlisted ? (
+                    <HeartIcon className="text-lg text-red-500" />
+                  ) : (
+                    <HeartOutlineIcon className="text-lg" />
+                  )}
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground shadow-sm backdrop-blur transition hover:border-blue-200 hover:bg-card hover:text-blue-600"
+                  title="Share"
+                  type="button"
+                >
+                  <ShareIcon className="text-lg" />
+                </button>
+              </div>
             </div>
 
             <div className="flex w-full gap-2 mt-auto">
