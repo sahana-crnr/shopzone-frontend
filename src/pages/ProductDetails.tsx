@@ -1,4 +1,11 @@
-import React, { useCallback } from "react";
+import React, {
+  ChangeEvent,
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -8,18 +15,20 @@ import {
   FaHeart,
   FaRegHeart,
   FaShoppingCart,
+  FaCamera,
 } from "react-icons/fa";
 import { FiShare2 } from "react-icons/fi";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
 import ImageCarousel from "../components/ImageCarousel";
+import ProductCard from "../components/ProductCard";
 import toast from "react-hot-toast";
 import { useQuery } from "@tanstack/react-query";
 import useShopStore from "../store/useShopStore";
 import { Button } from "../components/ui/button";
 import { Product } from "../types/shop";
 import { toIconComponent } from "../utils/icons";
-import { fetchProductById } from "../api/products";
+import { fetchProductById, fetchProducts } from "../api/products";
 import { ApiError } from "../api/client";
 
 const ArrowLeftIcon = toIconComponent(FaArrowLeft);
@@ -29,7 +38,88 @@ const BoltIcon = toIconComponent(FaBolt);
 const HeartIcon = toIconComponent(FaHeart);
 const HeartOutlineIcon = toIconComponent(FaRegHeart);
 const ShoppingCartIcon = toIconComponent(FaShoppingCart);
+const CameraIcon = toIconComponent(FaCamera);
 const ShareIcon = toIconComponent(FiShare2);
+
+type CustomerReview = {
+  id: string;
+  author: string;
+  rating: number;
+  comment: string;
+  image?: string;
+  createdAt: string;
+};
+
+type ReviewFormState = {
+  author: string;
+  rating: number;
+  comment: string;
+  image: string;
+};
+
+const normalizeText = (value?: string) => value?.trim().toLowerCase() ?? "";
+
+const getSimilarityScore = (product: Product, candidate: Product) => {
+  let score = 0;
+
+  if (
+    normalizeText(product.category) &&
+    normalizeText(product.category) === normalizeText(candidate.category)
+  ) {
+    score += 40;
+  }
+
+  const productTags = new Set((product.tags ?? []).map(normalizeText));
+  const candidateTags = (candidate.tags ?? []).map(normalizeText);
+  candidateTags.forEach((tag) => {
+    if (tag && productTags.has(tag)) {
+      score += 25;
+    }
+  });
+
+  if (
+    normalizeText(product.color) &&
+    normalizeText(product.color) === normalizeText(candidate.color)
+  ) {
+    score += 10;
+  }
+
+  if (
+    normalizeText(product.size) &&
+    normalizeText(product.size) === normalizeText(candidate.size)
+  ) {
+    score += 8;
+  }
+
+  const nameWords = new Set(normalizeText(product.name).split(/\s+/).filter(Boolean));
+  normalizeText(candidate.name)
+    .split(/\s+/)
+    .filter(Boolean)
+    .forEach((word) => {
+      if (nameWords.has(word)) {
+        score += 5;
+      }
+    });
+
+  return score;
+};
+
+const getReviewsStorageKey = (productId: number) =>
+  `shopzone-product-reviews-${productId}`;
+
+const formatReviewDate = (value: string) =>
+  new Intl.DateTimeFormat("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+
+const emptyReviewForm: ReviewFormState = {
+  author: "",
+  rating: 5,
+  comment: "",
+  image: "",
+};
 
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +136,16 @@ const ProductDetails: React.FC = () => {
     enabled: !Number.isNaN(productId),
     retry: false,
   });
+  const { data: similarProductsResponse } = useQuery({
+    queryKey: ["similar-products", product?.id, product?.category],
+    queryFn: () =>
+      fetchProducts({
+        category: product?.category || undefined,
+        page: 1,
+        page_size: 16,
+      }),
+    enabled: Boolean(product),
+  });
 
   const wishlist = useShopStore((state) => state.wishlist) as Product[];
   const toggleWishlist = useShopStore((state) => state.toggleWishlist) as (
@@ -54,6 +154,30 @@ const ProductDetails: React.FC = () => {
   const addToCart = useShopStore((state) => state.addToCart) as (
     product: Product,
   ) => void;
+  const [customerReviews, setCustomerReviews] = useState<CustomerReview[]>([]);
+  const [reviewForm, setReviewForm] =
+    useState<ReviewFormState>(emptyReviewForm);
+
+  useEffect(() => {
+    if (Number.isNaN(productId)) {
+      return;
+    }
+
+    const savedReviews = window.localStorage.getItem(
+      getReviewsStorageKey(productId),
+    );
+
+    if (!savedReviews) {
+      setCustomerReviews([]);
+      return;
+    }
+
+    try {
+      setCustomerReviews(JSON.parse(savedReviews) as CustomerReview[]);
+    } catch {
+      setCustomerReviews([]);
+    }
+  }, [productId]);
 
   const handleWishlist = useCallback(() => {
     if (product) {
@@ -100,6 +224,73 @@ const ProductDetails: React.FC = () => {
     useShopStore.getState().closeCart();
     navigate("/cart");
   }, [addToCart, navigate, product]);
+
+  const handleReviewImageChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+
+      if (!file) {
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        setReviewForm((currentForm) => ({
+          ...currentForm,
+          image: typeof reader.result === "string" ? reader.result : "",
+        }));
+      };
+      reader.readAsDataURL(file);
+    },
+    [],
+  );
+
+  const handleReviewSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+
+      if (!product || !reviewForm.comment.trim()) {
+        toast.error("Please write a review before submitting.");
+        return;
+      }
+
+      const nextReview: CustomerReview = {
+        id: `${product.id}-${Date.now()}`,
+        author: reviewForm.author.trim() || "Verified customer",
+        rating: reviewForm.rating,
+        comment: reviewForm.comment.trim(),
+        image: reviewForm.image,
+        createdAt: new Date().toISOString(),
+      };
+      const nextReviews = [nextReview, ...customerReviews];
+
+      setCustomerReviews(nextReviews);
+      window.localStorage.setItem(
+        getReviewsStorageKey(product.id),
+        JSON.stringify(nextReviews),
+      );
+      setReviewForm(emptyReviewForm);
+      toast.success("Review added successfully.");
+    },
+    [customerReviews, product, reviewForm],
+  );
+
+  const similarProducts = useMemo(() => {
+    if (!product || !similarProductsResponse?.results) {
+      return [];
+    }
+
+    return similarProductsResponse.results
+      .filter((candidate) => candidate.id !== product.id)
+      .map((candidate) => ({
+        product: candidate,
+        score: getSimilarityScore(product, candidate),
+      }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 4)
+      .map((item) => item.product);
+  }, [product, similarProductsResponse]);
 
   if (isLoading) {
     return (
@@ -309,6 +500,171 @@ const ProductDetails: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <section className="mx-auto mt-8 max-w-[1200px] rounded-2xl border border-border bg-card p-4 shadow-sm md:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">
+                Customer reviews
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Share your experience with this product
+              </p>
+            </div>
+            <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
+              {customerReviews.length} added
+            </span>
+          </div>
+
+          <form
+            onSubmit={handleReviewSubmit}
+            className="space-y-3 rounded-xl border border-border bg-background p-4"
+          >
+            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+              <input
+                value={reviewForm.author}
+                onChange={(event) =>
+                  setReviewForm((currentForm) => ({
+                    ...currentForm,
+                    author: event.target.value,
+                  }))
+                }
+                placeholder="Your name"
+                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-purple-500"
+              />
+              <select
+                value={reviewForm.rating}
+                onChange={(event) =>
+                  setReviewForm((currentForm) => ({
+                    ...currentForm,
+                    rating: Number(event.target.value),
+                  }))
+                }
+                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-purple-500"
+                aria-label="Review rating"
+              >
+                {[5, 4, 3, 2, 1].map((value) => (
+                  <option key={value} value={value}>
+                    {value} star{value === 1 ? "" : "s"}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <textarea
+              value={reviewForm.comment}
+              onChange={(event) =>
+                setReviewForm((currentForm) => ({
+                  ...currentForm,
+                  comment: event.target.value,
+                }))
+              }
+              placeholder="Write your review"
+              rows={4}
+              className="w-full resize-none rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-purple-500"
+            />
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-purple-600">
+                <CameraIcon className="text-base" />
+                Add product image
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleReviewImageChange}
+                  className="sr-only"
+                />
+              </label>
+
+              <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
+                Submit review
+              </Button>
+            </div>
+
+            {reviewForm.image && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
+                <img
+                  src={reviewForm.image}
+                  alt="Selected review upload"
+                  className="h-16 w-16 rounded-md object-cover"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setReviewForm((currentForm) => ({
+                      ...currentForm,
+                      image: "",
+                    }))
+                  }
+                  className="text-sm font-medium text-muted-foreground hover:text-red-500"
+                >
+                  Remove image
+                </button>
+              </div>
+            )}
+          </form>
+
+          <div className="mt-4 space-y-3">
+            {customerReviews.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border bg-background p-4 text-sm text-muted-foreground">
+                No customer reviews yet.
+              </div>
+            ) : (
+              customerReviews.map((review) => (
+                <article
+                  key={review.id}
+                  className="rounded-xl border border-border bg-background p-4"
+                >
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {review.author}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatReviewDate(review.createdAt)}
+                      </p>
+                    </div>
+                    <span className="flex items-center rounded-sm bg-purple-600 px-2 py-1 text-xs font-bold text-white">
+                      {review.rating}
+                      <StarIcon className="ml-1 h-3 w-3" />
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {review.comment}
+                  </p>
+                  {review.image && (
+                    <img
+                      src={review.image}
+                      alt={`${review.author} product review`}
+                      className="mt-3 h-24 w-24 rounded-lg border border-border object-cover"
+                    />
+                  )}
+                </article>
+              ))
+            )}
+          </div>
+        </section>
+
+        {similarProducts.length > 0 && (
+          <section className="mx-auto mt-8 max-w-[1200px]">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Similar products
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Matched from the same category and product details
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {similarProducts.map((similarProduct) => (
+                <ProductCard key={similarProduct.id} product={similarProduct} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer />
     </div>
