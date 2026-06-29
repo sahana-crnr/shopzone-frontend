@@ -52,6 +52,16 @@ export interface OrderSummary {
   updatedAt: string;
 }
 
+export interface CustomerReview {
+  id: number;
+  productId: number;
+  author: string;
+  rating: number;
+  comment: string;
+  image?: string;
+  createdAt: string;
+}
+
 export interface UserProfile {
   id?: number;
   name?: string;

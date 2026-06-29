@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import { Product } from "../types/shop";
+import { CustomerReview, Product } from "../types/shop";
 
 export type ProductFilters = {
   searchTerm: string;
@@ -53,6 +53,30 @@ export async function fetchProducts(params: ProductListParams = {}) {
 
 export async function fetchProductById(id: number) {
   return apiRequest<Product>(`/api/products/${id}/`);
+}
+
+export type ProductReviewPayload = {
+  rating: number;
+  comment: string;
+  image?: string;
+};
+
+export async function fetchProductReviews(productId: number) {
+  return apiRequest<CustomerReview[]>(`/api/products/${productId}/reviews/`);
+}
+
+export async function createProductReview(
+  productId: number,
+  payload: ProductReviewPayload,
+  accessToken: string,
+) {
+  return apiRequest<CustomerReview>(`/api/products/${productId}/reviews/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function fetchProductCatalog() {

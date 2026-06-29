@@ -2,7 +2,6 @@ import React, {
   ChangeEvent,
   FormEvent,
   useCallback,
-  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -23,12 +22,18 @@ import Footer from "../components/common/Footer";
 import ImageCarousel from "../components/ImageCarousel";
 import ProductCard from "../components/ProductCard";
 import toast from "react-hot-toast";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useShopStore from "../store/useShopStore";
+import useAuthStore from "../store/useAuthStore";
 import { Button } from "../components/ui/button";
 import { Product } from "../types/shop";
 import { toIconComponent } from "../utils/icons";
-import { fetchProductById, fetchProducts } from "../api/products";
+import {
+  createProductReview,
+  fetchProductById,
+  fetchProductReviews,
+  fetchProducts,
+} from "../api/products";
 import { ApiError } from "../api/client";
 
 const ArrowLeftIcon = toIconComponent(FaArrowLeft);
@@ -41,17 +46,7 @@ const ShoppingCartIcon = toIconComponent(FaShoppingCart);
 const CameraIcon = toIconComponent(FaCamera);
 const ShareIcon = toIconComponent(FiShare2);
 
-type CustomerReview = {
-  id: string;
-  author: string;
-  rating: number;
-  comment: string;
-  image?: string;
-  createdAt: string;
-};
-
 type ReviewFormState = {
-  author: string;
   rating: number;
   comment: string;
   image: string;
@@ -104,9 +99,6 @@ const getSimilarityScore = (product: Product, candidate: Product) => {
   return score;
 };
 
-const getReviewsStorageKey = (productId: number) =>
-  `shopzone-product-reviews-${productId}`;
-
 const formatReviewDate = (value: string) =>
   new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
@@ -115,7 +107,6 @@ const formatReviewDate = (value: string) =>
   }).format(new Date(value));
 
 const emptyReviewForm: ReviewFormState = {
-  author: "",
   rating: 5,
   comment: "",
   image: "",
@@ -124,6 +115,7 @@ const emptyReviewForm: ReviewFormState = {
 const ProductDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const productId = Number(id);
   const {
     data: product,
@@ -146,38 +138,52 @@ const ProductDetails: React.FC = () => {
       }),
     enabled: Boolean(product),
   });
+  const { data: customerReviews = [], isLoading: areReviewsLoading } = useQuery({
+    queryKey: ["product-reviews", productId],
+    queryFn: () => fetchProductReviews(productId),
+    enabled: !Number.isNaN(productId),
+  });
 
   const wishlist = useShopStore((state) => state.wishlist) as Product[];
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const toggleWishlist = useShopStore((state) => state.toggleWishlist) as (
     product: Product,
   ) => void;
   const addToCart = useShopStore((state) => state.addToCart) as (
     product: Product,
   ) => void;
-  const [customerReviews, setCustomerReviews] = useState<CustomerReview[]>([]);
   const [reviewForm, setReviewForm] =
     useState<ReviewFormState>(emptyReviewForm);
+  const reviewMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken || Number.isNaN(productId)) {
+        throw new Error("Please log in again to submit your review.");
+      }
 
-  useEffect(() => {
-    if (Number.isNaN(productId)) {
-      return;
-    }
-
-    const savedReviews = window.localStorage.getItem(
-      getReviewsStorageKey(productId),
-    );
-
-    if (!savedReviews) {
-      setCustomerReviews([]);
-      return;
-    }
-
-    try {
-      setCustomerReviews(JSON.parse(savedReviews) as CustomerReview[]);
-    } catch {
-      setCustomerReviews([]);
-    }
-  }, [productId]);
+      return createProductReview(
+        productId,
+        {
+          rating: reviewForm.rating,
+          comment: reviewForm.comment.trim(),
+          image: reviewForm.image,
+        },
+        accessToken,
+      );
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["product-reviews", productId] }),
+        queryClient.invalidateQueries({ queryKey: ["product", productId] }),
+        queryClient.invalidateQueries({ queryKey: ["product-catalog"] }),
+      ]);
+      setReviewForm(emptyReviewForm);
+      toast.success("Review added successfully.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Unable to submit review.");
+    },
+  });
 
   const handleWishlist = useCallback(() => {
     if (product) {
@@ -254,25 +260,14 @@ const ProductDetails: React.FC = () => {
         return;
       }
 
-      const nextReview: CustomerReview = {
-        id: `${product.id}-${Date.now()}`,
-        author: reviewForm.author.trim() || "Verified customer",
-        rating: reviewForm.rating,
-        comment: reviewForm.comment.trim(),
-        image: reviewForm.image,
-        createdAt: new Date().toISOString(),
-      };
-      const nextReviews = [nextReview, ...customerReviews];
+      if (!currentUser || !accessToken) {
+        toast.error("Please log in again to submit your review.");
+        return;
+      }
 
-      setCustomerReviews(nextReviews);
-      window.localStorage.setItem(
-        getReviewsStorageKey(product.id),
-        JSON.stringify(nextReviews),
-      );
-      setReviewForm(emptyReviewForm);
-      toast.success("Review added successfully.");
+      reviewMutation.mutate();
     },
-    [customerReviews, product, reviewForm],
+    [accessToken, currentUser, product, reviewForm.comment, reviewMutation],
   );
 
   const similarProducts = useMemo(() => {
@@ -347,7 +342,7 @@ const ProductDetails: React.FC = () => {
       <Header />
 
       <main className="flex-1 p-2 md:p-4 pb-20">
-        <div className="max-w-[1200px] mx-auto mb-4 mt-2 ">
+        <div className="max-w-[1400px] mx-auto mb-4 mt-2 ">
           <Button
             onClick={() => navigate(-1)}
             variant="outline"
@@ -357,7 +352,7 @@ const ProductDetails: React.FC = () => {
           </Button>
         </div>
 
-        <div className="max-w-[1200px] mx-auto bg-card flex flex-col md:flex-row shadow-sm rounded-2xl border border-border">
+        <div className="max-w-[1400px] mx-auto bg-card flex flex-col md:flex-row shadow-sm rounded-2xl border border-border">
           <div className="relative w-full md:w-2/5 p-4 md:p-6 border-r border-border flex flex-col items-center">
             <div className="relative w-full">
               <ImageCarousel
@@ -411,7 +406,7 @@ const ProductDetails: React.FC = () => {
             </div>
           </div>
 
-          <div className="w-full md:w-3/5 p-4 md:p-8">
+          <div className="w-full md:w-4/5 p-4 md:p-8">
             <h1 className="text-lg md:text-xl font-medium text-foreground mb-2">
               {product.name}
             </h1>
@@ -521,17 +516,12 @@ const ProductDetails: React.FC = () => {
             className="space-y-3 rounded-xl border border-border bg-background p-4"
           >
             <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <input
-                value={reviewForm.author}
-                onChange={(event) =>
-                  setReviewForm((currentForm) => ({
-                    ...currentForm,
-                    author: event.target.value,
-                  }))
-                }
-                placeholder="Your name"
-                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-purple-500"
-              />
+              <div className="flex min-h-10 items-center rounded-md border border-border bg-card px-3 text-sm text-muted-foreground">
+                Posting as{" "}
+                <span className="ml-1 font-semibold text-foreground">
+                  {currentUser?.name || "your account"}
+                </span>
+              </div>
               <select
                 value={reviewForm.rating}
                 onChange={(event) =>
@@ -576,8 +566,12 @@ const ProductDetails: React.FC = () => {
                 />
               </label>
 
-              <Button type="submit" className="bg-purple-600 hover:bg-purple-700">
-                Submit review
+              <Button
+                type="submit"
+                disabled={reviewMutation.isPending}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                {reviewMutation.isPending ? "Submitting..." : "Submit review"}
               </Button>
             </div>
 
@@ -605,7 +599,11 @@ const ProductDetails: React.FC = () => {
           </form>
 
           <div className="mt-4 space-y-3">
-            {customerReviews.length === 0 ? (
+            {areReviewsLoading ? (
+              <div className="rounded-xl border border-border bg-background p-4 text-sm text-muted-foreground">
+                Loading customer reviews...
+              </div>
+            ) : customerReviews.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border bg-background p-4 text-sm text-muted-foreground">
                 No customer reviews yet.
               </div>
@@ -646,7 +644,7 @@ const ProductDetails: React.FC = () => {
         </section>
 
         {similarProducts.length > 0 && (
-          <section className="mx-auto mt-8 max-w-[1200px]">
+          <section className="mx-auto mt-6 max-w-[1200px]">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-foreground">
