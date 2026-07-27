@@ -175,6 +175,38 @@ export async function fetchOrderById(orderId: number, accessToken: string) {
   });
 }
 
+export async function fetchDeliveryOrders(accessToken: string) {
+  return apiRequest<OrderSummary[]>("/api/orders/deliveries/", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function acceptDelivery(orderId: number, accessToken: string) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/accept_delivery/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+}
+
+export async function updateOrderStatus(
+  orderId: number,
+  status: string,
+  accessToken: string,
+) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/status/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+
 export const mapCartResponseToItems = (items: CartItemResponse[]): CartItem[] =>
   items.map((item) => ({
     ...item.product,

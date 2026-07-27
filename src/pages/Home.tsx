@@ -80,7 +80,7 @@ const Home = () => {
   }, [fetchNextPage, hasNextPage, inView, isFetchingNextPage]);
 
   const pages = data?.pages ?? [];
-  const allProducts = pages.flatMap((page) => page.products);
+  const allProducts = pages.flatMap((page) => page?.products ?? []).filter((p): p is typeof p => Boolean(p && p.id !== undefined));
   const searchQuery = debouncedSearchTerm.trim();
   const displayProducts = useMemo(() => {
     if (!searchQuery) {

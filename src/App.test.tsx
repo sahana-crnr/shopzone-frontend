@@ -1,14 +1,16 @@
 import { render, screen } from "@testing-library/react";
 import { expect, test } from "@jest/globals";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import App from "./App";
 
-test("renders the login page on the default route", () => {
+jest.mock("react-router-dom", () => require("react-router"), { virtual: true });
+
+test("renders the login page on the default route", async () => {
   render(
     <MemoryRouter initialEntries={["/"]}>
       <App />
     </MemoryRouter>,
   );
 
-  expect(screen.getByRole("heading", { name: /login/i })).toBeTruthy();
+  expect(await screen.findByRole("heading", { name: /login/i })).toBeTruthy();
 });

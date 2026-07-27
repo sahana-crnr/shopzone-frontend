@@ -14,7 +14,8 @@ import {
   FaCamera,
   FaEdit,
   FaCheck,
-  FaTimes
+  FaTimes,
+  FaShieldAlt
 } from "react-icons/fa";
 import { toIconComponent } from "../utils/icons";
 
@@ -28,6 +29,7 @@ const CameraIcon = toIconComponent(FaCamera);
 const EditIcon = toIconComponent(FaEdit);
 const CheckIcon = toIconComponent(FaCheck);
 const TimesIcon = toIconComponent(FaTimes);
+const ShieldIcon = toIconComponent(FaShieldAlt);
 
 const Account: React.FC = () => {
   const navigate = useNavigate();
@@ -70,7 +72,6 @@ const Account: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      // Create a temporary URL for the uploaded image preview
       const imageUrl = URL.createObjectURL(file);
       setFormData(prev => ({ ...prev, profileImage: imageUrl }));
     }
@@ -86,19 +87,17 @@ const Account: React.FC = () => {
         submitData.append("profileImage", selectedFile);
       }
 
-      // Safely attempt to get the token, checking common property names
       const authState = useAuthStore.getState() as any;
       const token = authState.token || authState.accessToken || authState.access; 
       
       if (!token) {
-        console.error("No token found in Zustand store. Current state:", authState);
+        console.error("No token found in Zustand store.");
         alert("Authentication error: No token found. Please log out and log back in.");
         return;
       }
       
       const response = await fetch("http://127.0.0.1:8000/api/auth/profile/", {
         method: "PATCH",
-        // Note: Do NOT set 'Content-Type' manually. The browser automatically handles it for FormData.
         headers: {
           "Authorization": `Bearer ${token}` 
         },
@@ -107,10 +106,7 @@ const Account: React.FC = () => {
 
       if (response.ok) {
         const updatedUser = await response.json();
-        
-        // Update the auth store so the rest of the app sees the changes immediately
         useAuthStore.setState({ currentUser: updatedUser });
-        
       } else {
         console.error("Failed to update profile:", await response.text());
       }
@@ -122,7 +118,6 @@ const Account: React.FC = () => {
   };
 
   const handleCancelEdit = () => {
-    // Revert form data back to original user data
     if (currentUser) {
       setFormData({
         name: currentUser.name || '',
@@ -139,6 +134,8 @@ const Account: React.FC = () => {
     { icon: CreditCardIcon, label: 'Payment Methods', description: 'Manage your payment options', path: '/payments' },
     { icon: SettingsIcon, label: 'Account Settings', description: 'Password, notifications, and preferences', path: '/settings' },
   ];
+
+  const primaryRole = (currentUser as any)?.primary_role || (currentUser as any)?.roles?.[0] || "customer";
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
@@ -185,7 +182,6 @@ const Account: React.FC = () => {
                     </div>
                   )}
                   
-                  {/* Hidden file input for image upload */}
                   <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -223,10 +219,16 @@ const Account: React.FC = () => {
                       <h1 className="text-3xl font-bold">
                         {formData.name || 'My Account'}
                       </h1>
-                      <p className="text-muted-foreground mt-1 mb-4">{formData.email}</p>
-                      <span className="inline-block bg-purple-50 text-purple-700 text-xs px-3 py-1 rounded-full font-medium">
-                        Verified Shopper
-                      </span>
+                      <p className="text-muted-foreground mt-1 mb-3">{formData.email}</p>
+                      
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                        <span className="inline-flex items-center gap-1.5 bg-purple-100 text-purple-700 text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider dark:bg-purple-900/50 dark:text-purple-300">
+                          <ShieldIcon className="text-xs" /> Role: {primaryRole.replace('_', ' ')}
+                        </span>
+                        <span className="inline-block bg-muted text-muted-foreground text-xs px-3 py-1 rounded-full font-medium">
+                          Verified Account
+                        </span>
+                      </div>
                     </>
                   )}
                 </div>

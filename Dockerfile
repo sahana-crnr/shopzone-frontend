@@ -1,22 +1,20 @@
-FROM node:20-alpine AS build
+# Use an official Node runtime as a parent image
+FROM node:18
 
+# Set the working directory in the container
 WORKDIR /app
 
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm ci
 
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application's code
 COPY . .
 
-ARG REACT_APP_API_BASE_URL=http://localhost:8000
-ENV REACT_APP_API_BASE_URL=${REACT_APP_API_BASE_URL}
+# Make port 3000 available to the world outside this container
+EXPOSE 3000
 
-RUN npm run build
-
-FROM nginx:1.27-alpine
-
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/build /usr/share/nginx/html
-
-EXPOSE 80
-
-CMD ["nginx", "-g", "daemon off;"]
+# Run the app when the container launches
+CMD ["npm", "start"]

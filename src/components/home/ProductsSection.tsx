@@ -83,7 +83,11 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
     );
   }
 
-  if (displayProducts.length === 0) {
+  const validProducts = (displayProducts ?? []).filter(
+    (product): product is Product => Boolean(product && product.id !== undefined)
+  );
+
+  if (validProducts.length === 0) {
     return (
       <div className="rounded-[2rem] border border-border bg-card/80 px-6 py-20 text-center text-lg text-muted-foreground shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
         No products found matching your criteria.
@@ -97,7 +101,7 @@ const ProductsSection: React.FC<ProductsSectionProps> = ({
         key={animationSeed}
         className="grid grid-cols-2 gap-3 md:gap-6 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4"
       >
-        {displayProducts.map((product, index) => (
+        {validProducts.map((product, index) => (
           <AnimatedResultCard
             key={`${animationSeed}-${product.id}`}
             product={product}

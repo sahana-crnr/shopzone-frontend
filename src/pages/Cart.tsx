@@ -1,9 +1,10 @@
-import React, { ChangeEvent, useRef, useState } from "react";
+import React, { ChangeEvent, useEffect, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
-import { FaTrash, FaMinus, FaPlus } from "react-icons/fa";
+import { FaTrash, FaMinus, FaPlus, FaMapMarkerAlt } from "react-icons/fa";
 import { FiShoppingCart } from "react-icons/fi";
 import useAuthStore from "../store/useAuthStore";
 import useShopStore, {
@@ -15,6 +16,7 @@ import { Input } from "../components/ui/input";
 import { CartItem } from "../types/shop";
 import { toIconComponent } from "../utils/icons";
 import { checkoutOrder } from "../api/commerce";
+import { fetchCustomerAddresses } from "../api/addresses";
 import {
   quantityButtonClass,
   quantityContainerClass,
@@ -25,6 +27,7 @@ const TrashIcon = toIconComponent(FaTrash);
 const MinusIcon = toIconComponent(FaMinus);
 const PlusIcon = toIconComponent(FaPlus);
 const ShoppingCartIcon = toIconComponent(FiShoppingCart);
+const MapPinIcon = toIconComponent(FaMapMarkerAlt);
 
 const Cart: React.FC = () => {
   const navigate = useNavigate();
@@ -41,11 +44,45 @@ const Cart: React.FC = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const [couponInput, setCouponInput] = useState<string>("");
   const [shippingAddress, setShippingAddress] = useState<string>("");
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("custom");
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const checkoutInFlight = useRef(false);
 
   const discountAmount = Math.round(cartTotalPrice * (discountPercent / 100));
   const finalPrice = cartTotalPrice - discountAmount;
+
+  // Fetch saved customer addresses
+  const { data: savedAddresses = [] } = useQuery({
+    queryKey: ["customer-addresses"],
+    queryFn: () => {
+      if (!accessToken) throw new Error("Not authenticated");
+      return fetchCustomerAddresses(accessToken);
+    },
+    enabled: Boolean(accessToken),
+  });
+
+  // Pre-select default address if available
+  useEffect(() => {
+    if (savedAddresses.length > 0) {
+      const defaultAddr = savedAddresses.find((a) => a.is_default) || savedAddresses[0];
+      setSelectedAddressId(String(defaultAddr.id));
+      setShippingAddress(defaultAddr.full_address);
+    }
+  }, [savedAddresses]);
+
+  const handleAddressSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedAddressId(val);
+
+    if (val === "custom") {
+      setShippingAddress("");
+    } else {
+      const chosen = savedAddresses.find((a) => String(a.id) === val);
+      if (chosen) {
+        setShippingAddress(chosen.full_address);
+      }
+    }
+  };
 
   const handleCouponChange = (event: ChangeEvent<HTMLInputElement>) => {
     setCouponInput(event.target.value.toUpperCase());
@@ -71,7 +108,7 @@ const Cart: React.FC = () => {
 
     try {
       if (!shippingAddress.trim()) {
-        toast.error("Please enter a shipping address.");
+        toast.error("Please select or enter a shipping address.");
         return;
       }
 
@@ -168,9 +205,9 @@ const Cart: React.FC = () => {
                     <div className={quantityContainerClass}>
                       <button
                         type="button"
-                      onClick={() =>
-                        void updateQuantity(item.cartItemId ?? item.id, -1)
-                      }
+                        onClick={() =>
+                          void updateQuantity(item.cartItemId ?? item.id, -1)
+                        }
                         className={quantityButtonClass}
                         aria-label={`Decrease quantity of ${item.name}`}
                       >
@@ -181,9 +218,9 @@ const Cart: React.FC = () => {
                       </span>
                       <button
                         type="button"
-                      onClick={() =>
-                        void updateQuantity(item.cartItemId ?? item.id, 1)
-                      }
+                        onClick={() =>
+                          void updateQuantity(item.cartItemId ?? item.id, 1)
+                        }
                         className={quantityButtonClass}
                         aria-label={`Increase quantity of ${item.name}`}
                       >
@@ -212,21 +249,46 @@ const Cart: React.FC = () => {
               </h2>
 
               <div className="flex flex-col gap-2 border-b pb-4">
-                <label htmlFor="shipping-address" className="text-sm font-medium">
-                  Shipping Address
-                </label>
+                <div className="flex justify-between items-center">
+                  <label htmlFor="shipping-address-select" className="text-sm font-medium flex items-center gap-1.5">
+                    <MapPinIcon className="text-purple-600" /> Delivery Address
+                  </label>
+                  <Link
+                    to="/addresses"
+                    className="text-xs text-purple-600 hover:underline font-bold"
+                  >
+                    Manage
+                  </Link>
+                </div>
+
+                {savedAddresses.length > 0 && (
+                  <select
+                    id="shipping-address-select"
+                    value={selectedAddressId}
+                    onChange={handleAddressSelectChange}
+                    className="h-10 rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-purple-500/40"
+                  >
+                    {savedAddresses.map((addr) => (
+                      <option key={addr.id} value={addr.id}>
+                        {addr.address_type}: {addr.full_name} ({addr.city}) {addr.is_default ? "★ Default" : ""}
+                      </option>
+                    ))}
+                    <option value="custom">+ Enter Custom Address</option>
+                  </select>
+                )}
+
                 <textarea
                   id="shipping-address"
                   name="shippingAddress"
-                  rows={4}
-                  placeholder="Enter your full delivery address"
+                  rows={3}
+                  placeholder="Enter full delivery address"
                   value={shippingAddress}
-                  onChange={(event) => setShippingAddress(event.target.value)}
-                  className="min-h-24 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-purple-500/40"
+                  onChange={(event) => {
+                    setSelectedAddressId("custom");
+                    setShippingAddress(event.target.value);
+                  }}
+                  className="min-h-20 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none transition focus:ring-2 focus:ring-purple-500/40"
                 />
-                <p className="text-xs text-muted-foreground">
-                  This address will be saved with your order.
-                </p>
               </div>
 
               <div className="flex flex-col gap-2 border-b pb-4">
@@ -251,7 +313,7 @@ const Cart: React.FC = () => {
                       id="coupon-code"
                       name="couponCode"
                       type="text"
-                      placeholder="Enter Code (e.g. SAVE10)"
+                      placeholder="Enter Code (e.g. WELCOME10)"
                       value={couponInput}
                       onChange={handleCouponChange}
                       className="h-10 text-sm uppercase bg-background border-border text-foreground shadow-sm"

@@ -35,11 +35,22 @@ const useAuthStore = create<AuthStoreState>()(
 
       registerUser: async (email, password, phone, name): Promise<AuthActionResult> => {
         try {
-          const user = await registerAccount({
+          await registerAccount({
             name,
             email,
             phone,
             password,
+          });
+
+          const tokens = await loginAccount({ email, password });
+          const currentUser = await fetchCurrentUser(tokens.access);
+          const user = toUserProfile(currentUser);
+
+          set({
+            currentUser: user,
+            isLoggedIn: true,
+            accessToken: tokens.access,
+            refreshToken: tokens.refresh,
           });
 
           useUsersStore.getState().addUser({
@@ -54,8 +65,8 @@ const useAuthStore = create<AuthStoreState>()(
 
           return {
             success: true,
-            message: "Account created successfully!",
-            user: toUserProfile(user),
+            message: "Account created and logged in successfully!",
+            user,
           };
         } catch (error) {
           if (error instanceof ApiError) {

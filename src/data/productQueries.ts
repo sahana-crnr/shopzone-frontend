@@ -55,10 +55,20 @@ export const fetchProductsPage = async ({
     page_size: PRODUCTS_PER_PAGE,
   });
 
+  const productsList = Array.isArray(response)
+    ? response
+    : Array.isArray(response?.results)
+    ? response.results
+    : [];
+
+  const count = typeof response?.count === "number" ? response.count : productsList.length;
+  const page = typeof response?.page === "number" ? response.page : normalizedPage;
+  const hasMore = typeof response?.has_more === "boolean" ? response.has_more : false;
+
   return {
-    page: response.page,
-    products: response.results,
-    totalCount: response.count,
-    hasMore: response.has_more,
+    page,
+    products: productsList,
+    totalCount: count,
+    hasMore,
   };
 };

@@ -52,7 +52,13 @@ type ReviewFormState = {
   image: string;
 };
 
-const normalizeText = (value?: string) => value?.trim().toLowerCase() ?? "";
+const normalizeText = (value?: unknown) => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "object" && value !== null && "name" in value) {
+    return String((value as { name: unknown }).name ?? "").trim().toLowerCase();
+  }
+  return String(value).trim().toLowerCase();
+};
 
 const getSimilarityScore = (product: Product, candidate: Product) => {
   let score = 0;
@@ -328,13 +334,9 @@ const ProductDetails: React.FC = () => {
     ((originalPrice - product.price) / originalPrice) * 100,
   );
 
-  const rating = product.rating || 4.3;
-  const ratingsCount = product.ratingsCount
-    ? product.ratingsCount.toLocaleString()
-    : "8,543";
-  const reviewsCount = product.reviewsCount
-    ? product.reviewsCount.toLocaleString()
-    : "854";
+  const rating = typeof product.rating === "number" ? product.rating : 0;
+  const ratingsCount = (product.ratingsCount ?? 0).toLocaleString();
+  const reviewsCount = (product.reviewsCount ?? 0).toLocaleString();
   const isWishlisted = wishlist.some((item) => item.id === product.id);
 
   return (
@@ -406,18 +408,29 @@ const ProductDetails: React.FC = () => {
             </div>
           </div>
 
-          <div className="w-full md:w-4/5 p-4 md:p-8">
+          <div className="w-full md:w-3/5 p-4 md:p-8">
             <h1 className="text-lg md:text-xl font-medium text-foreground mb-2">
               {product.name}
             </h1>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="bg-purple-600 text-white px-1.5 py-0.5 rounded-sm text-xs font-bold flex items-center">
-                {rating} <StarIcon className="w-3 h-3 ml-1" />
-              </span>
-              <span className="text-muted-foreground text-sm font-medium">
-                {ratingsCount} Ratings & {reviewsCount} Reviews
-              </span>
-            </div>
+            {product.ratingsCount && product.ratingsCount > 0 ? (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="bg-purple-600 text-white px-2 py-0.5 rounded text-xs font-bold flex items-center">
+                  {rating} <StarIcon className="w-3 h-3 ml-1" />
+                </span>
+                <span className="text-muted-foreground text-sm font-medium">
+                  {ratingsCount} Rating{product.ratingsCount > 1 ? "s" : ""} & {reviewsCount} Review{product.reviewsCount > 1 ? "s" : ""}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs font-medium">
+                  No ratings yet
+                </span>
+                <span className="text-muted-foreground text-sm">
+                  Be the first customer to rate & review this product!
+                </span>
+              </div>
+            )}
 
             <div className="mb-6">
               <span className="text-purple-600 text-sm font-bold dark:text-purple-300">
@@ -511,92 +524,106 @@ const ProductDetails: React.FC = () => {
             </span>
           </div>
 
-          <form
-            onSubmit={handleReviewSubmit}
-            className="space-y-3 rounded-xl border border-border bg-background p-4"
-          >
-            <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-              <div className="flex min-h-10 items-center rounded-md border border-border bg-card px-3 text-sm text-muted-foreground">
-                Posting as{" "}
-                <span className="ml-1 font-semibold text-foreground">
-                  {currentUser?.name || "your account"}
-                </span>
+          {currentUser && accessToken ? (
+            <form
+              onSubmit={handleReviewSubmit}
+              className="space-y-3 rounded-xl border border-border bg-background p-4"
+            >
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div className="flex min-h-10 items-center rounded-md border border-border bg-card px-3 text-sm text-muted-foreground">
+                  Posting as{" "}
+                  <span className="ml-1 font-semibold text-foreground">
+                    {currentUser?.name || currentUser?.email || "your account"}
+                  </span>
+                </div>
+                <select
+                  value={reviewForm.rating}
+                  onChange={(event) =>
+                    setReviewForm((currentForm) => ({
+                      ...currentForm,
+                      rating: Number(event.target.value),
+                    }))
+                  }
+                  className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-purple-500"
+                  aria-label="Review rating"
+                >
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <option key={value} value={value}>
+                      {value} star{value === 1 ? "" : "s"}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <select
-                value={reviewForm.rating}
+
+              <textarea
+                value={reviewForm.comment}
                 onChange={(event) =>
                   setReviewForm((currentForm) => ({
                     ...currentForm,
-                    rating: Number(event.target.value),
+                    comment: event.target.value,
                   }))
                 }
-                className="h-10 rounded-md border border-border bg-card px-3 text-sm text-foreground outline-none transition focus:border-purple-500"
-                aria-label="Review rating"
-              >
-                {[5, 4, 3, 2, 1].map((value) => (
-                  <option key={value} value={value}>
-                    {value} star{value === 1 ? "" : "s"}
-                  </option>
-                ))}
-              </select>
-            </div>
+                placeholder="Write your review and rating feedback..."
+                rows={4}
+                className="w-full resize-none rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-purple-500"
+              />
 
-            <textarea
-              value={reviewForm.comment}
-              onChange={(event) =>
-                setReviewForm((currentForm) => ({
-                  ...currentForm,
-                  comment: event.target.value,
-                }))
-              }
-              placeholder="Write your review"
-              rows={4}
-              className="w-full resize-none rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground outline-none transition focus:border-purple-500"
-            />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-purple-600">
+                  <CameraIcon className="text-base" />
+                  Add product image (optional)
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleReviewImageChange}
+                    className="sr-only"
+                  />
+                </label>
 
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-muted-foreground transition hover:text-purple-600">
-                <CameraIcon className="text-base" />
-                Add product image
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleReviewImageChange}
-                  className="sr-only"
-                />
-              </label>
+                <Button
+                  type="submit"
+                  disabled={reviewMutation.isPending}
+                  className="bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                >
+                  {reviewMutation.isPending ? "Submitting..." : "Submit Review"}
+                </Button>
+              </div>
 
+              {reviewForm.image && (
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
+                  <img
+                    src={reviewForm.image}
+                    alt="Selected review upload"
+                    className="h-16 w-16 rounded-md object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReviewForm((currentForm) => ({
+                        ...currentForm,
+                        image: "",
+                      }))
+                    }
+                    className="text-sm font-medium text-muted-foreground hover:text-red-500"
+                  >
+                    Remove image
+                  </button>
+                </div>
+              )}
+            </form>
+          ) : (
+            <div className="rounded-xl border border-border bg-background p-6 text-center space-y-3">
+              <p className="text-muted-foreground text-sm font-medium">
+                Want to write a review and rate this product?
+              </p>
               <Button
-                type="submit"
-                disabled={reviewMutation.isPending}
-                className="bg-purple-600 hover:bg-purple-700"
+                onClick={() => navigate("/login")}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-medium px-6 py-2"
               >
-                {reviewMutation.isPending ? "Submitting..." : "Submit review"}
+                Log In to Rate & Review
               </Button>
             </div>
-
-            {reviewForm.image && (
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-2">
-                <img
-                  src={reviewForm.image}
-                  alt="Selected review upload"
-                  className="h-16 w-16 rounded-md object-cover"
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setReviewForm((currentForm) => ({
-                      ...currentForm,
-                      image: "",
-                    }))
-                  }
-                  className="text-sm font-medium text-muted-foreground hover:text-red-500"
-                >
-                  Remove image
-                </button>
-              </div>
-            )}
-          </form>
+          )}
 
           <div className="mt-4 space-y-3">
             {areReviewsLoading ? (
