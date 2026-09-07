@@ -133,6 +133,25 @@ const useAuthStore = create<AuthStoreState>()(
         });
       },
 
+      setAuthTokens: async (accessToken: string, refreshToken?: string) => {
+        try {
+          const currentUser = await fetchCurrentUser(accessToken);
+          const user = toUserProfile(currentUser);
+
+          set({
+            currentUser: user,
+            isLoggedIn: true,
+            accessToken,
+            refreshToken: refreshToken || null,
+          });
+
+          return true;
+        } catch (error) {
+          console.error("Unable to restore session from token:", error);
+          return false;
+        }
+      },
+
       checkEmailExists: (email) => {
         const users = useUsersStore.getState().users;
         const currentUser = get().currentUser;

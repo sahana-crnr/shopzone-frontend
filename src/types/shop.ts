@@ -31,18 +31,26 @@ export interface CouponInfo {
 
 export interface OrderItem {
   id: number;
+  productId?: number;
   product: Product;
   productName: string;
   productImage: string;
   unitPrice: number;
   quantity: number;
   lineTotal: number;
+  status?: string;
+  cancellationReason?: string;
+  returnReason?: string;
 }
 
 export interface OrderSummary {
   id: number;
+  customerName?: string;
+  customerPhone?: string;
   shippingAddress: string;
   status: string;
+  paymentStatus?: string;
+  paymentTransactionId?: string;
   coupon: CouponInfo | null;
   subtotal: number;
   discountAmount: number;
@@ -50,6 +58,10 @@ export interface OrderSummary {
   items: OrderItem[];
   createdAt: string;
   updatedAt: string;
+  cancellationReason?: string;
+  returnReason?: string;
+  canCancel?: boolean;
+  canReturn?: boolean;
 }
 
 export interface CustomerReview {
@@ -140,6 +152,7 @@ export interface AuthStoreState {
   ) => Promise<AuthActionResult>;
   loginUser: (email: string, password: string) => Promise<AuthActionResult>;
   logoutUser: () => void;
+  setAuthTokens: (accessToken: string, refreshToken?: string) => Promise<boolean>;
   checkEmailExists: (email: string) => boolean;
   updateUserData: (
     email: string,

@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { API_BASE_URL, apiRequest } from "./client";
 import {
   CartItem,
   CouponInfo,
@@ -46,9 +46,16 @@ export type CouponLookupResponse = CouponInfo;
 export type CheckoutPayload = {
   shipping_address: string;
   coupon_code?: string;
+  frontend_url?: string;
 };
 
 export type CheckoutResponse = OrderSummary;
+
+export type PayUInitiateResponse = {
+  order: OrderSummary;
+  payment_url: string;
+  payment_fields: Record<string, string>;
+};
 
 export type OrderListResponse = OrderSummary[];
 
@@ -157,6 +164,27 @@ export async function checkoutOrder(
   });
 }
 
+export async function initiatePayUPayment(payload: CheckoutPayload, accessToken: string) {
+  return apiRequest<PayUInitiateResponse>("/api/payments/payu/initiate/", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function downloadInvoice(orderId: number, accessToken: string) {
+  const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}/invoice/`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error("Unable to download invoice.");
+  const url = URL.createObjectURL(await response.blob());
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `shopzone-invoice-${orderId}.pdf`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export async function fetchOrders(accessToken: string) {
   return apiRequest<OrderListResponse>("/api/orders/", {
     method: "GET",
@@ -204,6 +232,65 @@ export async function updateOrderStatus(
       Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function cancelOrder(orderId: number, reason: string, accessToken: string) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/cancel/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function cancelOrderItem(
+  orderId: number,
+  itemId: number,
+  reason: string,
+  accessToken: string,
+) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/items/${itemId}/cancel/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function returnOrder(orderId: number, reason: string, accessToken: string) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/return/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function returnOrderItem(
+  orderId: number,
+  itemId: number,
+  reason: string,
+  accessToken: string,
+) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/items/${itemId}/return/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function acceptReturn(orderId: number, accessToken: string) {
+  return apiRequest<OrderSummary>(`/api/orders/${orderId}/accept_return/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
   });
 }
 

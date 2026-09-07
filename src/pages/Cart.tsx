@@ -15,7 +15,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { CartItem } from "../types/shop";
 import { toIconComponent } from "../utils/icons";
-import { checkoutOrder } from "../api/commerce";
+import { initiatePayUPayment } from "../api/commerce";
 import { fetchCustomerAddresses } from "../api/addresses";
 import {
   quantityButtonClass,
@@ -112,17 +112,31 @@ const Cart: React.FC = () => {
         return;
       }
 
-      await checkoutOrder(
+      const payment = await initiatePayUPayment(
         {
           shipping_address: shippingAddress.trim(),
           coupon_code: discountCode || undefined,
+          frontend_url: window.location.origin,
         },
         accessToken,
       );
 
-      clearShop();
-      toast.success("Order placed successfully!");
-      navigate("/orders");
+      toast.loading("Redirecting to secure payment gateway...", { duration: 4000 });
+
+      // PayU expects a browser form POST; submitting it takes the customer to
+      // the test gateway without ever exposing the merchant salt.
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = payment.payment_url;
+      Object.entries(payment.payment_fields).forEach(([name, value]) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      });
+      document.body.appendChild(form);
+      form.submit();
     } catch (error) {
       if (error instanceof Error) {
         toast.error(error.message);
