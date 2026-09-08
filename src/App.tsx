@@ -1,22 +1,23 @@
-import { lazy, Suspense, useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import useAuthStore from "./store/useAuthStore";
 import useShopStore from "./store/useShopStore";
 import useThemeStore from "./store/useThemeStore";
+import { lazyWithRetry } from "./utils/lazyWithRetry";
 
-const Login = lazy(() => import("./pages/Login"));
-const Register = lazy(() => import("./pages/Register"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const Home = lazy(() => import("./pages/Home"));
-const About = lazy(() => import("./pages/About"));
-const Contact = lazy(() => import("./pages/Contact"));
-const ProductDetails = lazy(() => import("./pages/ProductDetails"));
-const Wishlist = lazy(() => import("./pages/Wishlist"));
-const Cart = lazy(() => import("./pages/Cart"));
-const Account = lazy(() => import("./pages/Account"));
-const Addresses = lazy(() => import("./pages/Addresses"));
-const Orders = lazy(() => import("./pages/Orders"));
+const Login = lazyWithRetry(() => import("./pages/Login"));
+const Register = lazyWithRetry(() => import("./pages/Register"));
+const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
+const Home = lazyWithRetry(() => import("./pages/Home"));
+const About = lazyWithRetry(() => import("./pages/About"));
+const Contact = lazyWithRetry(() => import("./pages/Contact"));
+const ProductDetails = lazyWithRetry(() => import("./pages/ProductDetails"));
+const Wishlist = lazyWithRetry(() => import("./pages/Wishlist"));
+const Cart = lazyWithRetry(() => import("./pages/Cart"));
+const Account = lazyWithRetry(() => import("./pages/Account"));
+const Addresses = lazyWithRetry(() => import("./pages/Addresses"));
+const Orders = lazyWithRetry(() => import("./pages/Orders"));
 
 function App() {
   const isDark = useThemeStore((state) => state.isDark);

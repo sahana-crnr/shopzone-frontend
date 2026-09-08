@@ -2,7 +2,9 @@ import React, {
   ChangeEvent,
   FormEvent,
   useCallback,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -17,10 +19,13 @@ import {
   FaCamera,
 } from "react-icons/fa";
 import { FiShare2 } from "react-icons/fi";
+import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
 import ImageCarousel from "../components/ImageCarousel";
 import ProductCard from "../components/ProductCard";
+import RecentlyViewedStrip from "../components/home/RecentlyViewedStrip";
+import { addRecentlyViewed } from "../utils/recentlyViewed";
 import toast from "react-hot-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import useShopStore from "../store/useShopStore";
@@ -276,21 +281,48 @@ const ProductDetails: React.FC = () => {
     [accessToken, currentUser, product, reviewForm.comment, reviewMutation],
   );
 
+  useEffect(() => {
+    if (product) {
+      addRecentlyViewed(product);
+    }
+  }, [product]);
+
+  const similarScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleSimilarScroll = (direction: "left" | "right") => {
+    if (!similarScrollRef.current) return;
+    const scrollAmount = 300;
+    similarScrollRef.current.scrollBy({
+      left: direction === "left" ? -scrollAmount : scrollAmount,
+      behavior: "smooth",
+    });
+  };
+
   const similarProducts = useMemo(() => {
     if (!product || !similarProductsResponse?.results) {
       return [];
     }
 
-    return similarProductsResponse.results
-      .filter((candidate) => candidate.id !== product.id)
+    const candidates = similarProductsResponse.results.filter(
+      (candidate) => candidate.id !== product.id,
+    );
+
+    const scored = candidates
       .map((candidate) => ({
         product: candidate,
         score: getSimilarityScore(product, candidate),
       }))
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 4)
       .map((item) => item.product);
+
+    if (scored.length >= 4) {
+      return scored.slice(0, 8);
+    }
+
+    const scoredIds = new Set(scored.map((p) => p.id));
+    const fallback = candidates.filter((c) => !scoredIds.has(c.id));
+    return [...scored, ...fallback].slice(0, 8);
   }, [product, similarProductsResponse]);
 
   if (isLoading) {
@@ -671,25 +703,61 @@ const ProductDetails: React.FC = () => {
         </section>
 
         {similarProducts.length > 0 && (
-          <section className="mx-auto mt-6 max-w-[1200px]">
+          <section className="mx-auto mt-10 max-w-[1200px] w-full">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold text-foreground">
-                  Similar products
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 mb-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-300" />
+                  Recommended For You
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">
+                  Similar Products
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  Matched from the same category and product details
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Customers who viewed this item also considered these options
                 </p>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleSimilarScroll("left")}
+                  aria-label="Scroll left"
+                  className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-slate-100 dark:hover:bg-white/5 text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSimilarScroll("right")}
+                  aria-label="Scroll right"
+                  className="w-9 h-9 rounded-xl border border-border bg-card hover:bg-slate-100 dark:hover:bg-white/5 text-foreground flex items-center justify-center transition-all hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div
+              ref={similarScrollRef}
+              className="flex items-stretch gap-4 sm:gap-5 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-muted-foreground/20 scroll-smooth"
+            >
               {similarProducts.map((similarProduct) => (
-                <ProductCard key={similarProduct.id} product={similarProduct} />
+                <div
+                  key={similarProduct.id}
+                  className="shrink-0 w-[240px] sm:w-[260px] md:w-[280px] snap-start flex flex-col"
+                >
+                  <ProductCard product={similarProduct} />
+                </div>
               ))}
             </div>
           </section>
         )}
+
+        {/* Recently Viewed Products Strip */}
+        <div className="mx-auto mt-6 max-w-[1200px] w-full">
+          <RecentlyViewedStrip excludeProductId={product?.id} />
+        </div>
       </main>
       <Footer />
     </div>

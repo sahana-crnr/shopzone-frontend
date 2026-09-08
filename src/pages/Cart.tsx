@@ -6,6 +6,7 @@ import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
 import { FaTrash, FaMinus, FaPlus, FaMapMarkerAlt } from "react-icons/fa";
 import { FiShoppingCart } from "react-icons/fi";
+import { Truck, Tag, Sparkles } from "lucide-react";
 import useAuthStore from "../store/useAuthStore";
 import useShopStore, {
   getCartTotalItems,
@@ -262,6 +263,37 @@ const Cart: React.FC = () => {
                 Order Summary
               </h2>
 
+              {/* Free Shipping Progress Meter */}
+              <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl p-3 text-xs">
+                <div className="flex items-center justify-between font-semibold mb-1.5 text-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                    {cartTotalPrice >= 1000 ? (
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                        🎉 You unlocked FREE Delivery!
+                      </span>
+                    ) : (
+                      <span>
+                        Add <strong className="text-purple-600 dark:text-purple-400">₹{1000 - cartTotalPrice}</strong> for FREE Delivery
+                      </span>
+                    )}
+                  </span>
+                  <span className="text-muted-foreground font-mono">
+                    {Math.min(100, Math.round((cartTotalPrice / 1000) * 100))}%
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-purple-200 dark:bg-purple-900/50 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      cartTotalPrice >= 1000 ? "bg-emerald-500" : "bg-purple-600"
+                    }`}
+                    style={{
+                      width: `${Math.min(100, Math.round((cartTotalPrice / 1000) * 100))}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
               <div className="flex flex-col gap-2 border-b pb-4">
                 <div className="flex justify-between items-center">
                   <label htmlFor="shipping-address-select" className="text-sm font-medium flex items-center gap-1.5">
@@ -306,8 +338,8 @@ const Cart: React.FC = () => {
               </div>
 
               <div className="flex flex-col gap-2 border-b pb-4">
-                <label htmlFor="coupon-code" className="text-sm font-medium">
-                  Apply Coupon
+                <label htmlFor="coupon-code" className="text-sm font-medium flex items-center gap-1.5">
+                  <Tag className="w-4 h-4 text-purple-600" /> Apply Coupon
                 </label>
                 {discountCode ? (
                   <div className="flex justify-between items-center bg-green-50 text-green-700 px-3 py-2 rounded-xl border border-green-200 dark:bg-green-500/10 dark:text-green-300 dark:border-green-500/20">
@@ -322,23 +354,49 @@ const Cart: React.FC = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <Input
-                      id="coupon-code"
-                      name="couponCode"
-                      type="text"
-                      placeholder="Enter Code (e.g. WELCOME10)"
-                      value={couponInput}
-                      onChange={handleCouponChange}
-                      className="h-10 text-sm uppercase bg-background border-border text-foreground shadow-sm"
-                    />
-                    <Button
-                      onClick={handleApplyCoupon}
-                      className="h-10 shrink-0 bg-gray-900 text-white hover:bg-gray-800 dark:bg-purple-600 dark:hover:bg-purple-500"
-                    >
-                      Apply
-                    </Button>
-                  </div>
+                  <>
+                    <div className="flex gap-2">
+                      <Input
+                        id="coupon-code"
+                        name="couponCode"
+                        type="text"
+                        placeholder="Enter Code (e.g. WELCOME10)"
+                        value={couponInput}
+                        onChange={handleCouponChange}
+                        className="h-10 text-sm uppercase bg-background border-border text-foreground shadow-sm"
+                      />
+                      <Button
+                        onClick={handleApplyCoupon}
+                        className="h-10 shrink-0 bg-gray-900 text-white hover:bg-gray-800 dark:bg-purple-600 dark:hover:bg-purple-500"
+                      >
+                        Apply
+                      </Button>
+                    </div>
+
+                    {/* Quick 1-Click Available Coupon Chips */}
+                    <div className="mt-2 flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-purple-600" /> Available Offers
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { code: "WELCOME10", desc: "10% OFF", min: 500 },
+                          { code: "SAVE15", desc: "15% OFF", min: 1000 },
+                          { code: "FESTIVE20", desc: "20% OFF", min: 2000 },
+                        ].map((c) => (
+                          <button
+                            key={c.code}
+                            type="button"
+                            onClick={() => void applyDiscount(c.code)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-dashed border-purple-400 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-xs font-bold transition-all hover:scale-105 active:scale-95 shadow-xs"
+                          >
+                            <span>{c.code}</span>
+                            <span className="text-[10px] font-normal opacity-80">({c.desc})</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
 

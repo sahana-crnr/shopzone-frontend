@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { FaTrash } from "react-icons/fa";
 import { FiShoppingCart } from "react-icons/fi";
+import { Truck } from "lucide-react";
 import useShopStore, {
   getCartTotalItems,
   getCartTotalPrice,
@@ -47,6 +48,37 @@ export default function CartSheet() {
           <SheetTitle>My Cart ({cartTotalItems})</SheetTitle>
         </SheetHeader>
         <Separator />
+        {cart.length > 0 && (
+          <div className="bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-900/50 rounded-xl p-3 my-1 text-xs">
+            <div className="flex items-center justify-between font-semibold mb-1.5 text-foreground">
+              <span className="flex items-center gap-1.5">
+                <Truck className="w-4 h-4 text-purple-600 dark:text-purple-400 shrink-0" />
+                {cartTotalPrice >= 1000 ? (
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                    🎉 You unlocked FREE Delivery!
+                  </span>
+                ) : (
+                  <span>
+                    Add <strong className="text-purple-600 dark:text-purple-400">₹{1000 - cartTotalPrice}</strong> more for FREE Delivery
+                  </span>
+                )}
+              </span>
+              <span className="text-muted-foreground font-mono">
+                {Math.min(100, Math.round((cartTotalPrice / 1000) * 100))}%
+              </span>
+            </div>
+            <div className="w-full h-1.5 bg-purple-200 dark:bg-purple-900/50 rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 rounded-full ${
+                  cartTotalPrice >= 1000 ? "bg-emerald-500" : "bg-purple-600"
+                }`}
+                style={{
+                  width: `${Math.min(100, Math.round((cartTotalPrice / 1000) * 100))}%`,
+                }}
+              />
+            </div>
+          </div>
+        )}
         {cart.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
             <ShoppingCartIcon className="text-6xl text-muted-foreground" />

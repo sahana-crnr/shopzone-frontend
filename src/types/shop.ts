@@ -14,6 +14,21 @@ export interface Product {
   reviewsCount?: number;
   tags?: string[];
   wishlistItemId?: number;
+  is_featured?: boolean;
+}
+
+export interface Banner {
+  id: number;
+  title: string;
+  subtitle?: string;
+  image_url: string;
+  target_category?: string;
+  target_url?: string;
+  button_text?: string;
+  badge?: string;
+  bg_gradient?: string;
+  is_active?: boolean;
+  order?: number;
 }
 
 export interface CartItem extends Product {

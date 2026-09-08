@@ -1,5 +1,5 @@
 import { apiRequest } from "./client";
-import { CustomerReview, Product } from "../types/shop";
+import { CustomerReview, Product, Banner } from "../types/shop";
 
 export type ProductFilters = {
   searchTerm: string;
@@ -82,4 +82,24 @@ export async function createProductReview(
 export async function fetchProductCatalog() {
   const response = await fetchProducts({ page: 1, page_size: 100 });
   return response.results;
+}
+
+export async function fetchBanners(): Promise<Banner[]> {
+  try {
+    const banners = await apiRequest<Banner[]>("/api/banners/");
+    return Array.isArray(banners) ? banners : [];
+  } catch (error) {
+    console.warn("Failed to fetch banners from API", error);
+    return [];
+  }
+}
+
+export async function fetchFeaturedProducts(): Promise<Product[]> {
+  try {
+    const products = await apiRequest<Product[]>("/api/products/featured/");
+    return Array.isArray(products) ? products : [];
+  } catch (error) {
+    console.warn("Failed to fetch featured products from API", error);
+    return [];
+  }
 }

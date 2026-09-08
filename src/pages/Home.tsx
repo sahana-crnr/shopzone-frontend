@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { InfiniteData, useInfiniteQuery } from "@tanstack/react-query";
+import { InfiniteData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useInView } from "react-intersection-observer";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
 import HomeControls from "../components/home/HomeControls";
 import ProductsSection from "../components/home/ProductsSection";
+import HeroBannerCarousel from "../components/home/HeroBannerCarousel";
+import CategoryQuickNav from "../components/home/CategoryQuickNav";
+import FeaturedProductsStrip from "../components/home/FeaturedProductsStrip";
+import RecentlyViewedStrip from "../components/home/RecentlyViewedStrip";
 import useSearchStore from "../store/useSearchStore";
 import { useDebounce } from "use-debounce";
 import {
@@ -13,6 +17,7 @@ import {
   ProductsPage,
   ProductsQueryKey,
 } from "../data/productQueries";
+import { fetchBanners, fetchFeaturedProducts } from "../api/products";
 import { scoreSearchMatch } from "../utils/searchTerms";
 
 const Home = () => {
@@ -127,33 +132,73 @@ const Home = () => {
     ],
   );
 
+  const { data: banners } = useQuery({
+    queryKey: ["banners"],
+    queryFn: fetchBanners,
+    staleTime: 1000 * 60 * 10,
+  });
+
+  const { data: featuredProducts, isLoading: isFeaturedLoading } = useQuery({
+    queryKey: ["featured-products"],
+    queryFn: fetchFeaturedProducts,
+    staleTime: 1000 * 60 * 5,
+  });
+
   return (
     <div className="bg-background text-foreground min-h-screen flex flex-col">
       <Header />
       <main className="flex-1 p-4 md:p-8 max-w-8xl mx-auto w-full">
-        <HomeControls
-          totalFilteredCount={totalFilteredCount}
-          minPrice={minPrice}
-          maxPrice={maxPrice}
-          minRating={minRating}
-          minReviews={minReviews}
-          sortBy={sortBy}
+        {/* Promotional Hero Banner Carousel */}
+        <HeroBannerCarousel
+          banners={banners}
+          onSelectCategory={(category) => setSelectedCategory(category)}
+        />
+
+        {/* Visual Category Quick Navigation */}
+        <CategoryQuickNav
           selectedCategory={selectedCategory}
-          setMinPrice={setMinPrice}
-          setMaxPrice={setMaxPrice}
-          setMinRating={setMinRating}
-          setMinReviews={setMinReviews}
-          setSortBy={setSortBy}
-          clearCategory={() => setSelectedCategory("")}
+          onSelectCategory={(category) => setSelectedCategory(category)}
         />
-        <ProductsSection
-          displayProducts={displayProducts}
-          animationSeed={animationSeed}
-          isInitialLoading={isLoading && displayProducts.length === 0}
-          isFetchingNextPage={isFetchingNextPage}
-          loadMoreRef={loadMoreRef}
-          errorMessage={errorMessage}
-        />
+
+        {/* Featured Deals & Best Sellers Showcase */}
+        {((featuredProducts && featuredProducts.length > 0) || isFeaturedLoading) && (
+          <FeaturedProductsStrip
+            products={featuredProducts || []}
+            isLoading={isFeaturedLoading}
+          />
+        )}
+
+        {/* Main Product Collection */}
+        <div id="product-collection">
+          <HomeControls
+            totalFilteredCount={totalFilteredCount}
+            minPrice={minPrice}
+            maxPrice={maxPrice}
+            minRating={minRating}
+            minReviews={minReviews}
+            sortBy={sortBy}
+            selectedCategory={selectedCategory}
+            setMinPrice={setMinPrice}
+            setMaxPrice={setMaxPrice}
+            setMinRating={setMinRating}
+            setMinReviews={setMinReviews}
+            setSortBy={setSortBy}
+            clearCategory={() => setSelectedCategory("")}
+          />
+          <ProductsSection
+            displayProducts={displayProducts}
+            animationSeed={animationSeed}
+            isInitialLoading={isLoading && displayProducts.length === 0}
+            isFetchingNextPage={isFetchingNextPage}
+            loadMoreRef={loadMoreRef}
+            errorMessage={errorMessage}
+          />
+        </div>
+
+        {/* Recently Viewed Strip */}
+        <div className="mt-12">
+          <RecentlyViewedStrip />
+        </div>
       </main>
       <Footer />
     </div>
